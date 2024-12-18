@@ -1,0 +1,49 @@
+.buttons{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--b-bc);
+    color: white;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--f2);
+    font-weight: 600;
+    text-align: center;
+    justify-content: center;
+}
+
+/* add_event */
+.buttons:hover{
+    background-color: var(--b-bch);
+}
+
+.buttons:disabled{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color:rgb(117, 117, 117);
+    color: white;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--f2);
+    font-weight: 600;
+    text-align: center;
+    justify-content: center;
+    cursor: not-allowed;
+}
+
+.add, .archive, .logout, .progress, .filemanager, .new_event{
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+@media (max-width: 390px) {
+    .buttons{
+        font-size: var(--f-ss);
+    }
+}

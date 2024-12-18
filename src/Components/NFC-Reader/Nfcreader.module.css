@@ -1,0 +1,162 @@
+.container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .container h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+  }
+  
+  .status {
+    text-align: center;
+    padding: 1rem;
+    margin: 1rem 0;
+    background-color: #e8f4fd;
+    border-radius: 4px;
+    color: #0066cc;
+  }
+  
+  .status.reading {
+    animation: pulse 1.5s infinite;
+  }
+  
+  .error {
+    text-align: center;
+    padding: 1rem;
+    margin: 1rem 0;
+    background-color: #fee2e2;
+    border-radius: 4px;
+    color: #dc2626;
+  }
+  
+  .studentInfo {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .studentInfo h2 {
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+    text-align: center;
+  }
+  
+  .infoGrid {
+    display: grid;
+    gap: 1rem;
+  }
+  
+  .infoRow {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .infoRow span:first-child {
+    font-weight: 600;
+    color: #64748b;
+  }
+  
+  .infoRow span:last-child {
+    color: #1e293b;
+  }
+  
+  .selfie {
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+  
+  .selfie img {
+    max-width: 200px;
+    border-radius: 0.5rem;
+    border: 3px solid #e2e8f0;
+  }
+  
+  .controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+  
+  .button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+  }
+  
+  .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .readButton {
+    background-color: #0066cc;
+    color: white;
+  }
+  
+  .readButton:hover:not(:disabled) {
+    background-color: #0052a3;
+  }
+  
+  .resetButton {
+    background-color: #64748b;
+    color: white;
+  }
+  
+  .resetButton:hover {
+    background-color: #475569;
+  }
+  
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .container {
+      margin: 1rem;
+      padding: 1rem;
+    }
+  
+    .infoRow {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+  
+    .controls {
+      flex-direction: column;
+    }
+  
+    .button {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .container h1{
+      font-size: var(--f-s);
+    }
+  }
