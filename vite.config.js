@@ -54,5 +54,5 @@ export default defineConfig({
       }
     })
   ],
-  base: '/NFC-StudentRegistration/'
+  base: '/NFC-CAPSTONE-PROJECT/'
 })
