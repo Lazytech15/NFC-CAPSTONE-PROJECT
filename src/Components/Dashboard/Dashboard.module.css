@@ -367,15 +367,17 @@
     .sidebar {
       position: fixed;
       left: -100%;
-      transition: left 0.3s ease;
+      transition: left 0.5s ease-in-out;
       width: 250px;
       z-index: 1000;
+      height: 102%;
+      margin-top: -30px;
     }
   
     .sidebarOpen {
-      left: 5px;
-      height: 98%;
-      border-radius: 0.5em;
+      left: 0;
+      height: 102%;
+      /* margin-top: -30px; */
     }
   
     .hamburgerBtn {
@@ -395,13 +397,17 @@
     }
   
     .mainContent {
-      margin-left: 0;
-      padding-top: 4rem;
-      overflow: hidden;
+        /* margin: auto; */
+        /* padding-top: 4rem; */
+        /* overflow: hidden; */
+        height: 94vh;
+        /* margin-top: 18px; */
+        overflow-x: hidden;
+        border-radius: 0.5em;
     }
   
     .profileSection {
-      padding-top: 1rem;
+      padding-top: 3rem;
     }
     .navLink{
       font-size: 0.8em;

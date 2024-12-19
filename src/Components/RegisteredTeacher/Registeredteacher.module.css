@@ -1,20 +1,18 @@
 .registeredUsersContainer {
-  padding: 20px;
+  /* padding: 20px; */
 }
 
 .header {
   display: flex;
   align-items: center;
   margin-bottom: 20px;
-}
-
-.header svg{
-  filter: invert(1);
+  margin-top: 30px;
 }
 
 .header h2 {
   margin-left: 10px;
   color: var(--c1);
+  font-size: var(--f-ms);
 }
 
 .tableContainer {
@@ -110,7 +108,7 @@
   width: 80%;
   max-width: 800px;
   max-height: 80%;
-  overflow: hidden;
+  overflow-y: auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -168,13 +166,12 @@
 .logContent {
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-family: var(--f2);
+  font-family: monospace;
   background-color: #f4f4f4;
   padding: 10px;
   border-radius: 4px;
   max-height: 300px;
   overflow-y: auto;
-  font-size: var(--f-ss);
 }
 
 .logLoading,
@@ -225,6 +222,77 @@
 .status_detail {
   color: #00ff00;
   margin-left: 1rem;
+}
+
+.fadeIn {
+  opacity: 1;
+  transition: opacity 0.3s ease-in;
+}
+
+.fadeOut {
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Mobile Responsive Cards */
+@media (max-width: 768px) {
+  .tableContainer {
+    overflow-x: hidden;
+  }
+  
+  .usersTable {
+    display: block;
+  }
+  
+  .usersTable thead {
+    display: none; /* Hide table headers on mobile */
+  }
+  
+  .usersTable tbody {
+    display: block;
+  }
+  
+  .usersTable tr {
+    display: block;
+    margin-bottom: 1rem;
+    background-color: var(--c3);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .usersTable td {
+    display: flex;
+    padding: 0.8rem;
+    border: none;
+    border-bottom: 1px solid rgba(221, 221, 221, 0.2);
+    text-align: center;
+    position: relative;
+    padding-left: 40%;
+    min-height: 1.5rem;
+    text-wrap: wrap;
+    font-size: var(--f-s);
+  /* align-content: center; */
+    justify-content: flex-end;
+  }
+  
+  .usersTable td:last-child {
+    border-bottom: none;
+  }
+  
+  /* Add labels for each field */
+  .usersTable td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0.8rem;
+    width: 35%;
+    font-weight: bold;
+    text-align: left;
+  }
+  
+  .actionButtons {
+    justify-content: flex-start;
+    padding-left: 40%;
+  }
 }
 
 @media (max-width: 600px) {

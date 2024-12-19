@@ -149,6 +149,16 @@
     margin: 1rem 0;
   }
 
+  .fadeIn {
+    opacity: 1;
+    transition: opacity 0.3s ease-in;
+  }
+  
+  .fadeOut {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+  }
+
   @media (max-width: 390px) {
     .container h1{
       font-size: var(--f-s);

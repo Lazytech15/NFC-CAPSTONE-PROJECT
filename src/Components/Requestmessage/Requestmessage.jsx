@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Send, X, Paperclip, Mail, Inbox, ExternalLink, Trash, Menu } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, X, Paperclip, Mail, Inbox, ExternalLink, Trash, Menu, Bell } from 'lucide-react';
 import styles from './Requestmessage.module.css';
-import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, or } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { requestNotificationPermission } from '/utils/firebase-messaging';
 import Buttons from '../Button/Button.module.css';
 
 const RequestForm = ({ onClose }) => {
@@ -14,6 +16,8 @@ const RequestForm = ({ onClose }) => {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [currentFolder, setCurrentFolder] = useState('inbox');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+
   const [formData, setFormData] = useState({
     to: '',
     subject: '',
@@ -23,10 +27,61 @@ const RequestForm = ({ onClose }) => {
 
   const db = getFirestore();
   const auth = getAuth();
+  const functions = getFunctions();
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     fetchMessages();
   }, [currentFolder]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target) && 
+          !event.target.closest(`.${styles.hamburgerMenu}`)) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const checkNotificationStatus = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      const userDoc = await getDocs(
+        query(collection(db, 'users'), where('email', '==', currentUser.email))
+      );
+      
+      if (!userDoc.empty) {
+        const userData = userDoc.docs[0].data();
+        setNotificationEnabled(!!userData.fcmTokens);
+      }
+    } catch (error) {
+      console.error('Error checking notification status:', error);
+    }
+  };
+
+  const handleEnableNotifications = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        alert('Please sign in to enable notifications');
+        return;
+      }
+
+      const token = await requestNotificationPermission(currentUser.uid);
+      if (token) {
+        setNotificationEnabled(true);
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+    }
+  };
 
   const fetchMessages = async () => {
     try {
@@ -93,7 +148,8 @@ const RequestForm = ({ onClose }) => {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
 
-      await addDoc(collection(db, 'Messages'), {
+      // Add message to Firestore
+      const messageRef = await addDoc(collection(db, 'Messages'), {
         sendTo: formData.to,
         subject: formData.subject,
         message: formData.message,
@@ -101,6 +157,33 @@ const RequestForm = ({ onClose }) => {
         timestamp: serverTimestamp(),
         read: false
       });
+
+      // Get recipient's user document
+      const recipientQuery = query(
+        collection(db, 'users'),
+        where('email', '==', formData.to)
+      );
+      const recipientSnapshot = await getDocs(recipientQuery);
+      
+      if (!recipientSnapshot.empty) {
+        const recipientDoc = recipientSnapshot.docs[0];
+        const recipientId = recipientDoc.id;
+
+        // Send notification if recipient has FCM tokens
+        if (recipientDoc.data().fcmTokens) {
+          const sendNotification = httpsCallable(functions, 'sendNotification');
+          await sendNotification({
+            userId: recipientId,
+            title: `New message from ${currentUser.email}`,
+            body: formData.subject,
+            data: {
+              messageId: messageRef.id,
+              type: 'new_message',
+              url: `/messages/${messageRef.id}`
+            }
+          });
+        }
+      }
 
       // Reset form and fetch updated messages
       setFormData({
@@ -148,13 +231,21 @@ const RequestForm = ({ onClose }) => {
     setIsSidebarOpen(false);
   };
 
-  return (
-    <>
-      <div className={`${styles.formOverlay} ${isMinimized ? '' : styles.visible}`} onClick={onClose} />
-      <div className={`${styles.composeWrapper} ${isMinimized ? styles.minimized : ''}`}>
-        {/* Header */}
-        <div className={styles.composeHeader}>
-          <h2 className={styles.headerTitle}>Messages</h2>
+    // Add notification toggle to the header
+    const renderHeader = () => (
+      <div className={styles.composeHeader}>
+        <button className={Buttons.buttons} onClick={() => handleFolderChange('inbox')}>BACK</button>
+        <h2 className={styles.headerTitle}>Messages</h2>
+        <div className={styles.headerActions}>
+          {!notificationEnabled && (
+            <button
+              onClick={handleEnableNotifications}
+              className={`${styles.notificationButton} ${Buttons.buttons}`}
+              title="Enable notifications"
+            >
+              <Bell />
+            </button>
+          )}
           <button 
             className={styles.hamburgerMenu} 
             onClick={toggleSidebar}
@@ -162,11 +253,20 @@ const RequestForm = ({ onClose }) => {
             <Menu />
           </button>
         </div>
+      </div>
+    );
+
+  return (
+    <>
+      <div className={`${styles.formOverlay} ${isMinimized ? '' : styles.visible}`} onClick={onClose} />
+      <div className={`${styles.composeWrapper} ${isMinimized ? styles.minimized : ''}`}>
+      {renderHeader()}
 
         {/* Main Content */}
         <div className={styles.mainContent}>
           {/* Sidebar */}
-          <div className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarMobile : ''}`}>
+          <div ref={sidebarRef} className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarMobile : ''}`}>
+          
             <button 
               className={Buttons.buttons}
               onClick={() => {

@@ -11,7 +11,9 @@
   * {
     transition: all 0.3s ease-in-out;
   }
-  
+  html{
+    overflow: hidden;
+  }
 
   :root{
     /* font styles */
@@ -27,6 +29,7 @@
     --c1:hsl(0, 0%, 0%);
     --c2:hsl(0, 0%, 100%);
     --c3:rgb(236, 236, 236);
+    --c4:#010066;
 
     /* font size */
     --f-ss:0.7em;

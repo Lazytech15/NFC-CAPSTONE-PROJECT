@@ -1,19 +1,13 @@
-// The line below is required for workbox to inject the manifest
-self.__WB_MANIFEST
-
-// Import workbox modules using importScripts
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
-
-const { registerRoute } = workbox.routing;
-const { CacheFirst, NetworkFirst, StaleWhileRevalidate } = workbox.strategies;
-const { precacheAndRoute } = workbox.precaching;
-const { ExpirationPlugin } = workbox.expiration;
+import { registerRoute } from 'workbox-routing';
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { precacheAndRoute } from 'workbox-precaching';
+import { ExpirationPlugin } from 'workbox-expiration';
 
 // Take control immediately
 self.skipWaiting();
 self.clients.claim();
 
-// Precache and route all static assets
+// The line below is required for workbox to inject the manifest
 precacheAndRoute(self.__WB_MANIFEST);
 
 // Cache page navigations (html) with a Network First strategy
@@ -21,36 +15,29 @@ registerRoute(
   // Check to see if the request is a navigation to a new page
   ({ request }) => request.mode === 'navigate',
   new NetworkFirst({
-    // Use a custom cache name
     cacheName: 'pages-cache',
   })
 );
 
 // Cache CSS, JS, and Web Worker requests with a Stale While Revalidate strategy
 registerRoute(
-  // Check to see if the request's destination is style for stylesheets, script for JavaScript, or worker for web worker
   ({ request }) =>
     request.destination === 'style' ||
     request.destination === 'script' ||
     request.destination === 'worker',
   new StaleWhileRevalidate({
-    // Use a custom cache name
     cacheName: 'assets-cache',
   })
 );
 
 // Cache images with a Cache First strategy
 registerRoute(
-  // Check to see if the request's destination is image
   ({ request }) => request.destination === 'image',
   new CacheFirst({
-    // Use a custom cache name
     cacheName: 'images-cache',
     plugins: [
       new ExpirationPlugin({
-        // Cache only 50 images
         maxEntries: 50,
-        // Cache for a maximum of 30 days
         maxAgeSeconds: 30 * 24 * 60 * 60,
       }),
     ],
@@ -66,4 +53,34 @@ self.addEventListener('fetch', (event) => {
       })
     );
   }
+});
+
+// Listen for messages from the client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {a
+    self.skipWaiting();
+  }
+});
+
+// Handle service worker updates
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName.startsWith('workbox-') || cacheName.endsWith('-cache')) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Notify all clients about the update
+      clients.claim(),
+      clients.matchAll().then((clients) => {
+        clients.forEach((client) => client.postMessage({ type: 'CACHE_UPDATED' }));
+      }),
+    ])
+  );
 });

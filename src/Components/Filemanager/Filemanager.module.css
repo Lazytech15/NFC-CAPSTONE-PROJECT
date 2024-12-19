@@ -290,6 +290,10 @@
 .nfcAuth {
   text-align: center;
 }
+.nfcAuth button {
+  width: 100%;
+}
+
 
 .error {
   color: #dc3545;

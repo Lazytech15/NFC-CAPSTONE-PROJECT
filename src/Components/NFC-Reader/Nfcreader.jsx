@@ -1,20 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import styles from './NFCReader.module.css';
 import Buttons from '../Button/Button.module.css';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyC8tDVbDIrKuylsyF3rbDSSPlzsEHXqZIs",
-    authDomain: "online-attendance-21f95.firebaseapp.com",
-    databaseURL: "https://online-attendance-21f95-default-rtdb.firebaseio.com",
-    projectId: "online-attendance-21f95",
-    storageBucket: "online-attendance-21f95.appspot.com",
-    messagingSenderId: "756223518392",
-    appId: "1:756223518392:web:5e8d28c78f7eefb8be764d"
-};
-
-const app = initializeApp(firebaseConfig);
+import { app } from '/utils/firebase-config.js';
 const db = getFirestore(app);
 
 const NFCReader = () => {

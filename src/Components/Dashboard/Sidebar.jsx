@@ -18,23 +18,8 @@ import {
   MessageCircle 
 } from 'lucide-react';
 
-import { initializeApp } from "firebase/app";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyC8tDVbDIrKuylsyF3rbDSSPlzsEHXqZIs",
-  authDomain: "online-attendance-21f95.firebaseapp.com",
-  databaseURL: "https://online-attendance-21f95-default-rtdb.firebaseio.com",
-  projectId: "online-attendance-21f95",
-  storageBucket: "online-attendance-21f95.appspot.com",
-  messagingSenderId: "756223518392",
-  appId: "1:756223518392:web:5e8d28c78f7eefb8be764d"
-};
-
 import { getAuth, signOut } from "firebase/auth";
 import { getFirestore, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -418,12 +403,12 @@ const Sidebar = () => {
                   </Link>
                 </li>
 
-              {/* <li className={styles.navItem}> 
+              <li className={styles.navItem}> 
                 <div className={styles.navLink} onClick={handleFileManagerClick}> 
                   <FolderOpen size={20} /> 
                   <span>File Manager</span> 
                 </div> 
-              </li> */}
+              </li>
               </>
             )}
           </ul>

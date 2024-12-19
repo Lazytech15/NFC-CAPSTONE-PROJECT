@@ -10,7 +10,7 @@
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  /* margin-bottom: 24px; */
   padding: 20px;
 }
 
@@ -282,6 +282,12 @@
 }
 
 @media (max-width: 600px) {
+  .card{
+    margin-top: 20px;
+  }
+  .container{
+    padding: 0;
+  }
   .cardTitle{
     font-size: var(--f-s);
   }
@@ -297,8 +303,9 @@
     font-weight: 500;
   }
   .input,.select{
-    padding: 0.3em;
+    padding: 0.4em;
     font-size: var(--f-ss);
+    width: 100%;
   }
   .status{
     width: 70%;

@@ -176,42 +176,44 @@ const RegisteredStudent = () => {
             </tr>
           </thead>
           <tbody>
-            {students.map((student) => (
-              <tr key={student.id} className={styles.studentRow}>
-                <td>{student.studentId}</td>
-                <td>{student.name}</td>
-                <td>{student.email}</td>
-                <td>{student.currentnfcId}</td>
-                <td>{student.campus}</td>
-                <td>{new Date(student.createdAt * 1000).toLocaleString()}</td>
-                <td>
-                  <div className={styles.actionButtons}>
-                    <button 
-                      onClick={() => handleViewLogs(student)}
-                      className={styles.viewLogsButton}
-                      title="View Logs"
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button 
-                      onClick={() => handleEdit(student)}
-                      className={styles.editButton}
-                      title="Edit"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(student)}
-                      className={styles.deleteButton}
-                      title="Delete"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+              {students.map((student) => (
+                <tr key={student.id} className={styles.studentRow}>
+                  <td data-label="Student ID">{student.studentId}</td>
+                  <td data-label="Name">{student.name}</td>
+                  <td data-label="Email">{student.email}</td>
+                  <td data-label="NFC CARD">{student.currentnfcId}</td>
+                  <td data-label="Campus">{student.campus}</td>
+                  <td data-label="Date Added">
+                    {new Date(student.createdAt * 1000).toLocaleString()}
+                  </td>
+                  <td data-label="Actions">
+                    <div className={styles.actionButtons}>
+                      <button 
+                        onClick={() => handleViewLogs(student)}
+                        className={styles.viewLogsButton}
+                        title="View Logs"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleEdit(student)}
+                        className={styles.editButton}
+                        title="Edit"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(student)}
+                        className={styles.deleteButton}
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
         </table>
       </div>
 

@@ -21,47 +21,51 @@ import {
 import styles from './StudentRegistration.module.css';
 import Buttons from '../Button/Button.module.css';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyC8tDVbDIrKuylsyF3rbDSSPlzsEHXqZIs",
-    authDomain: "online-attendance-21f95.firebaseapp.com",
-    databaseURL: "https://online-attendance-21f95-default-rtdb.firebaseio.com",
-    projectId: "online-attendance-21f95",
-    storageBucket: "online-attendance-21f95.appspot.com",
-    messagingSenderId: "756223518392",
-    appId: "1:756223518392:web:5e8d28c78f7eefb8be764d"
-};
+import { app } from '/utils/firebase-config.js';
 
-const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
 
 const StatusModal = ({ message, type, isProcessing }) => {
-    if (!message) return null;
-    
-    const getStatusClass = () => {
-      switch (type) {
-        case 'warning':
-          return styles.statusWarning;
-        case 'error':
-          return styles.statusError;
-        case 'success':
-          return styles.statusSuccess;
-        default:
-          return styles.statusInfo;
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+      if (message) {
+          setIsVisible(true);
+          const timer = setTimeout(() => {
+              setIsVisible(false);
+          }, 3000);
+
+          return () => clearTimeout(timer);
       }
-    };
+  }, [message]);
+
+  if (!message || !isVisible) return null;
   
-    return (
-      <div className={styles.modalOverlay}>
-        <div className={styles.modalContent}>
-          <div className={`${styles.status} ${getStatusClass()} ${isProcessing ? styles['animate-pulse'] : ''}`}>
-            {message}
-          </div>
-        </div>
-      </div>
-    );
+  const getStatusClass = () => {
+      switch (type) {
+          case 'warning':
+              return styles.statusWarning;
+          case 'error':
+              return styles.statusError;
+          case 'success':
+              return styles.statusSuccess;
+          default:
+              return styles.statusInfo;
+      }
   };
+
+  return (
+      <div className={`${styles.modalOverlay} ${isVisible ? styles.fadeIn : styles.fadeOut}`}>
+          <div className={styles.modalContent}>
+              <div className={`${styles.status} ${getStatusClass()} ${isProcessing ? styles['animate-pulse'] : ''}`}>
+                  {message}
+              </div>
+          </div>
+      </div>
+  );
+};
 
 const StudentRegistration = () => {
   const [formData, setFormData] = useState({

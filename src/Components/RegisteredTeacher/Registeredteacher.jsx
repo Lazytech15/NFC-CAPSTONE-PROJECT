@@ -176,6 +176,45 @@ const RegisteredTeachers = () => {
             </tr>
           </thead>
           <tbody>
+              {teachers.map((teacher) => (
+                <tr key={teacher.id} className={styles.teacherRow}>
+                  <td data-label="Teacher ID">{teacher.teacherId}</td>
+                  <td data-label="Name">{teacher.name}</td>
+                  <td data-label="Email">{teacher.email}</td>
+                  <td data-label="NFC CARD">{teacher.currentnfcId}</td>
+                  <td data-label="Campus">{teacher.campus}</td>
+                  <td data-label="Date Added">
+                    {new Date(teacher.createdAt * 1000).toLocaleString()}
+                  </td>
+                  <td data-label="Actions">
+                    <div className={styles.actionButtons}>
+                      <button 
+                        onClick={() => handleViewLogs(teacher)}
+                        className={styles.viewLogsButton}
+                        title="View Logs"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleEdit(teacher)}
+                        className={styles.editButton}
+                        title="Edit"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(teacher)}
+                        className={styles.deleteButton}
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          {/* <tbody>
             {teachers.map((teacher) => (
               <tr key={teacher.id} className={styles.teacherRow}>
                 <td>{teacher.teacherId}</td>
@@ -211,7 +250,7 @@ const RegisteredTeachers = () => {
                 </td>
               </tr>
             ))}
-          </tbody>
+          </tbody> */}
         </table>
       </div>
 

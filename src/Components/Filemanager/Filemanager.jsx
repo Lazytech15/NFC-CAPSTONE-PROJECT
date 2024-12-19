@@ -180,7 +180,7 @@ const FileManager = () => {
       await ndef.scan();
       
       ndef.addEventListener("reading", ({ serialNumber }) => {
-        if (serialNumber === userData?.currentnfcId) {
+        if (serialNumber === userData?.nfcSerialNumber) {
           setIsAuthenticated(true);
           setError('');
         } else {

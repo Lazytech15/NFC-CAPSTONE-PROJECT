@@ -20,18 +20,8 @@ import {
   deleteUser 
 } from "firebase/auth";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyC8tDVbDIrKuylsyF3rbDSSPlzsEHXqZIs",
-  authDomain: "online-attendance-21f95.firebaseapp.com",
-  databaseURL: "https://online-attendance-21f95-default-rtdb.firebaseio.com",
-  projectId: "online-attendance-21f95",
-  storageBucket: "online-attendance-21f95.appspot.com",
-  messagingSenderId: "756223518392",
-  appId: "1:756223518392:web:5e8d28c78f7eefb8be764d"
-};
+import { app } from '/utils/firebase-config.js';
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 const googleProvider = new GoogleAuthProvider();
 const auth = getAuth();
 const db = getFirestore(app);

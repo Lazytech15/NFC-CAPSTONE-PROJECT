@@ -1,3 +1,4 @@
+// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -7,16 +8,16 @@ export default defineConfig({
     react(),
     VitePWA({
       strategies: 'injectManifest',
-      srcDir: 'public',
-      filename: 'sw.js',
+      srcDir: 'src',  // Changed to src directory
+      filename: 'service worker.js',  // Changed back to sw.js
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg'],
       manifest: {
         name: 'TapTrack Pro',
         short_name: 'TapTrack',
         description: 'Streamline Attendance and Event Management with Real-Time Alerts',
-        theme_color: '#2563eb',
-        background_color: '#2563eb',
+        theme_color: '#010066',
+        background_color: '#010066',
         display: 'standalone',
         scope: '/NFC-CAPSTONE-PROJECT/',
         start_url: '/NFC-CAPSTONE-PROJECT/',
@@ -43,10 +44,7 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
-        sourcemap: true,
-        injectManifest: {
-          injectionPoint: 'self.__WB_MANIFEST'
-        }
+        sourcemap: true
       },
       devOptions: {
         enabled: true,
