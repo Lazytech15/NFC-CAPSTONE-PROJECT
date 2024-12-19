@@ -13,32 +13,35 @@ import RegisteredStudents from './Components/RegisteredStudent/RegisteredStudent
 import Process_log from './Components/Process_log/Process_log.jsx';
 import RequestForm from './Components/Requestmessage/Requestmessage.jsx';
 import NFCScanner from './Components/Dashboard/Nfcscanner/Nfcscanner.jsx';
+import PWARegistration from './Components/PWARegistration.jsx';
 
 function App() {
   return (
-    <Process_log>
-    <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard/*" element={<Dashboard />}>
-          <Route path="create-event" element={<CreateEvent />} />
-          <Route path="registered-teachers" element={<RegisteredTeachers />} />
-          <Route path="registered-students" element={<RegisteredStudents />} />
-          <Route path="teacher-registration" element={<TeacherRegistration />} />
-          <Route path="student-registration" element={<StudentRegistration />} />
-          <Route path="nfc-reader" element={<NFCReader />} />
-          <Route path="event-list" element={<EventList />} />
-          <Route path="request-message" element={<RequestForm />} />
-          <Route path="nfc-scanner" element={<NFCScanner />} />
-          <Route path="file-manager" element={<FileManager />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
-    </Process_log>
+    <>
+      <PWARegistration />
+      <Process_log>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard/*" element={<Dashboard />}>
+              <Route path="create-event" element={<CreateEvent />} />
+              <Route path="registered-teachers" element={<RegisteredTeachers />} />
+              <Route path="registered-students" element={<RegisteredStudents />} />
+              <Route path="teacher-registration" element={<TeacherRegistration />} />
+              <Route path="student-registration" element={<StudentRegistration />} />
+              <Route path="nfc-reader" element={<NFCReader />} />
+              <Route path="event-list" element={<EventList />} />
+              <Route path="request-message" element={<RequestForm />} />
+              <Route path="nfc-scanner" element={<NFCScanner />} />
+              <Route path="file-manager" element={<FileManager />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Router>
+      </Process_log>
+    </>
   );
 }
 
 export default App;
-
