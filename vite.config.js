@@ -18,23 +18,23 @@ export default defineConfig({
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
-        scope: '/NFC-StudentRegistration/',
-        start_url: '/NFC-StudentRegistration/',
+        scope: '/NFC-CAPSTONE-PROJECT/',
+        start_url: '/NFC-CAPSTONE-PROJECT/',
         icons: [
           {
-            src: '/NFC-StudentRegistration/icons/icon.svg',
+            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/NFC-StudentRegistration/icons/icon.svg',
+            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/NFC-StudentRegistration/icons/icon.svg',
+            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'maskable'

@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match('/NFC-StudentRegistration/') || caches.match('/NFC-StudentRegistration/index.html');
+        return caches.match('/NFC-CAPSTONE-PROJECT/') || caches.match('/NFC-CAPSTONE-PROJECT/index.html');
       })
     );
   }
