@@ -418,12 +418,12 @@ const Sidebar = () => {
                   </Link>
                 </li>
 
-              <li className={styles.navItem}> 
+              {/* <li className={styles.navItem}> 
                 <div className={styles.navLink} onClick={handleFileManagerClick}> 
                   <FolderOpen size={20} /> 
                   <span>File Manager</span> 
                 </div> 
-              </li>
+              </li> */}
               </>
             )}
           </ul>
