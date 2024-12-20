@@ -6,6 +6,7 @@ import { getAuth } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { requestNotificationPermission, onMessageListener, showNotification } from '/utils/firebase-messaging';
 import Buttons from '../Button/Button.module.css';
+import NotificationDialog from './NotificationDialog.jsx'
 
 const RequestForm = ({ onClose }) => {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -18,6 +19,8 @@ const RequestForm = ({ onClose }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [isNotificationRequesting, setIsNotificationRequesting] = useState(false);
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
+  const [hasClosedPrompt, setHasClosedPrompt] = useState(false);
 
   // Add this useEffect to check notification status when component mounts
 useEffect(() => {
@@ -140,15 +143,18 @@ useEffect(() => {
     }
   };
 
-  const handleEnableNotifications = async () => {
+  const handleEnableNotifications = () => {
+    setShowNotificationDialog(true);
+  };
+  
+  const handleNotificationConfirm = async () => {
     try {
       const currentUser = auth.currentUser;
-      console.log(currentUser);
       if (!currentUser) {
         alert('Please sign in to enable notifications');
         return;
       }
-
+  
       const token = await requestNotificationPermission(currentUser.uid);
       if (token) {
         const userInfo = await findUserCollectionAndUpdate(currentUser.email, {
@@ -158,17 +164,19 @@ useEffect(() => {
             device: navigator.userAgent
           }]
         });
-
+  
         if (!userInfo) {
           alert('User not found in any collection');
           return;
         }
-
+  
         setNotificationEnabled(true);
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
       alert('Failed to enable notifications. Please try again.');
+    } finally {
+      setShowNotificationDialog(false);
     }
   };
 
@@ -549,6 +557,17 @@ useEffect(() => {
           </div>
         </div>
       </div>
+      {/* Add this just before the final closing tag */}
+        {/* <NotificationDialog 
+          isOpen={showNotificationDialog}
+          onClose={() => setShowNotificationDialog(false)}
+          onEnable={handleNotificationConfirm}
+        /> */}
+        <NotificationDialog 
+          isEnabled={notificationEnabled}
+          onEnable={handleNotificationConfirm}
+          onClose={() => setHasClosedPrompt(true)}
+        />
     </>
   );
 };
