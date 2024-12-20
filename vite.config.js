@@ -19,23 +19,23 @@ export default defineConfig({
         theme_color: '#010066',
         background_color: '#010066',
         display: 'standalone',
-        scope: '/',
-        start_url: '/',
+        scope: '/NFC-CAPSTONE-PROJECT/',
+        start_url: '/NFC-CAPSTONE-PROJECT/',
         icons: [
           {
-            src: '/icons/icon.svg',
+            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/icons/icon.svg',
+            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/icons/icon.svg',
+            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'maskable'
@@ -52,5 +52,5 @@ export default defineConfig({
       }
     })
   ],
-  base: '/'
+  base: '/NFC-CAPSTONE-PROJECT/'
 })
