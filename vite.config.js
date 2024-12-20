@@ -52,5 +52,22 @@ export default defineConfig({
       }
     })
   ],
-  base: '/NFC-CAPSTONE-PROJECT/'
+  base: '/NFC-CAPSTONE-PROJECT/',
+  build: {
+    rollupOptions: {
+      plugins: [
+        {
+          name: 'firebase-path-replace',
+          transform(code) {
+            // Replace the Firebase paths in the built files
+            return {
+              code: code
+                .replace(/["']\/firebase-messaging-sw\.js["']/g, '"/NFC-CAPSTONE-PROJECT/firebase-messaging-sw.js"')
+                .replace(/["']\/firebase-cloud-messaging-push-scope["']/g, '"/NFC-CAPSTONE-PROJECT/firebase-cloud-messaging-push-scope"')
+            };
+          }
+        }
+      ]
+    }
+  }
 })
