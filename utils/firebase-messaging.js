@@ -36,14 +36,23 @@ export function showNotification(title, options) {
 
 export async function requestNotificationPermission(userId) {
   try {
+    await navigator.serviceWorker.register('/src/service worker.js', {
+      scope: '/NFC-CAPSTONE-PROJECT/'
+    });
+
     if (!('serviceWorker' in navigator)) {
       throw new Error('Service Worker is not supported');
     }
-
+    
     const registration = await navigator.serviceWorker.ready;
     
     if (Notification.permission === 'granted') {
       return await setupFCM(userId, registration);
+    }
+
+    if (Notification.permission !== 'granted') {
+      console.log('Notifications not granted');
+      return;
     }
 
     const permission = await Notification.requestPermission();

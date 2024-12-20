@@ -87,6 +87,7 @@ const RequestForm = ({ onClose }) => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         checkNotificationStatus();
+        fetchMessages();
       } else {
         setNotificationEnabled(false);
       }
@@ -143,7 +144,11 @@ const RequestForm = ({ onClose }) => {
       const token = await requestNotificationPermission(currentUser.uid);
       if (token) {
         const userInfo = await findUserCollectionAndUpdate(currentUser.email, {
-          fcmToken: token // Note: using fcmToken instead of fcmTokens
+          fcmTokens: [{
+            token: token,
+            lastUpdated: new Date().toISOString(),
+            device: navigator.userAgent
+          }]
         });
 
         if (!userInfo) {
