@@ -1,7 +1,7 @@
 /* Login.css */
 body{
   font-family: var(--f2);
-  background-image: url('./assets/login_cover.png');
+  background-image: url('/src/assets/login_cover.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
