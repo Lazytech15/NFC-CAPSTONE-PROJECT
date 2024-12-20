@@ -19,23 +19,23 @@ export default defineConfig({
         theme_color: '#010066',
         background_color: '#010066',
         display: 'standalone',
-        scope: '/NFC-CAPSTONE-PROJECT/',
-        start_url: '/NFC-CAPSTONE-PROJECT/',
+        scope: '/',
+        start_url: '/',
         icons: [
           {
-            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
+            src: '/icons/icon.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
+            src: '/icons/icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
+            src: '/icons/icon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'maskable'
@@ -52,7 +52,7 @@ export default defineConfig({
       }
     })
   ],
-  base: '/NFC-CAPSTONE-PROJECT/',
+  base: '/',
   build: {
     rollupOptions: {
       plugins: [
@@ -62,8 +62,8 @@ export default defineConfig({
             // Replace the Firebase paths in the built files
             return {
               code: code
-                .replace(/["']\/firebase-messaging-sw\.js["']/g, '"/NFC-CAPSTONE-PROJECT/firebase-messaging-sw.js"')
-                .replace(/["']\/firebase-cloud-messaging-push-scope["']/g, '"/NFC-CAPSTONE-PROJECT/firebase-cloud-messaging-push-scope"')
+                .replace(/["']\/firebase-messaging-sw\.js["']/g, '"/firebase-messaging-sw.js"')
+                .replace(/["']\/firebase-cloud-messaging-push-scope["']/g, '"/firebase-cloud-messaging-push-scope"')
             };
           }
         }
