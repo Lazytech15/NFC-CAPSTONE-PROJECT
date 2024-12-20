@@ -17,8 +17,8 @@ export function showNotification(title, options) {
   if (Notification.permission === "granted") {
     const notification = new Notification(title, {
       ...options,
-      icon: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
-      badge: '/NFC-CAPSTONE-PROJECT/icons/icon.svg',
+      icon: '/icons/icon.svg',
+      badge: '/icons/icon.svg',
       vibrate: [100, 50, 100],
     });
 
@@ -36,8 +36,8 @@ export function showNotification(title, options) {
 
 export async function requestNotificationPermission(userId) {
   try {
-    await navigator.serviceWorker.register('/NFC-CAPSTONE-PROJECT/firebase-messaging-sw.js', {
-      scope: '/NFC-CAPSTONE-PROJECT/'
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+      scope: '/'
     });
 
     if (!('serviceWorker' in navigator)) {

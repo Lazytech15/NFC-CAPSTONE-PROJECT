@@ -8,7 +8,7 @@ const root = createRoot(container);
 root.render(<App />);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/NFC-CAPSTONE-PROJECT/service-worker.js')
+  navigator.serviceWorker.register('/firebase-messaging-sw.js')
     .then((registration) => {
       console.log('Service Worker registration successful with scope: ', registration.scope);
     }).catch((error) => {

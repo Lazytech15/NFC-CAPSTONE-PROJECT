@@ -17,6 +17,14 @@ const RequestForm = ({ onClose }) => {
   const [currentFolder, setCurrentFolder] = useState('inbox');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [isNotificationRequesting, setIsNotificationRequesting] = useState(false);
+
+  // Add this useEffect to check notification status when component mounts
+useEffect(() => {
+  if ('Notification' in window) {
+    setNotificationEnabled(Notification.permission === 'granted');
+  }
+}, []);
 
   const [formData, setFormData] = useState({
     to: '',
@@ -228,7 +236,25 @@ const RequestForm = ({ onClose }) => {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
-
+  
+      // If notifications aren't enabled, ask user if they want to enable them
+      if (!notificationEnabled && 'Notification' in window) {
+        const shouldEnable = window.confirm('Would you like to enable notifications to receive updates about your messages?');
+        if (shouldEnable) {
+          setIsNotificationRequesting(true);
+          try {
+            const token = await requestNotificationPermission(currentUser.uid);
+            if (token) {
+              setNotificationEnabled(true);
+            }
+          } catch (error) {
+            console.error('Error enabling notifications:', error);
+          } finally {
+            setIsNotificationRequesting(false);
+          }
+        }
+      }
+  
       // Add message to Firestore
       const messageRef = await addDoc(collection(db, 'Messages'), {
         sendTo: formData.to,
@@ -238,34 +264,47 @@ const RequestForm = ({ onClose }) => {
         timestamp: serverTimestamp(),
         read: false
       });
-
+  
       // Get recipient's user document
-      const recipientQuery = query(
-        collection(db, 'users'),
-        where('email', '==', formData.to)
-      );
-      const recipientSnapshot = await getDocs(recipientQuery);
-      
-      if (!recipientSnapshot.empty) {
-        const recipientDoc = recipientSnapshot.docs[0];
-        const recipientId = recipientDoc.id;
-
-        // Send notification if recipient has FCM tokens
-        if (recipientDoc.data().fcmTokens) {
-          const sendNotification = httpsCallable(functions, 'sendNotification');
-          await sendNotification({
-            userId: recipientId,
-            title: `New message from ${currentUser.email}`,
-            body: formData.subject,
-            data: {
-              messageId: messageRef.id,
-              type: 'new_message',
-              url: `/messages/${messageRef.id}`
-            }
-          });
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+      let recipientData = null;
+  
+      for (const collectionName of collections) {
+        const recipientQuery = query(
+          collection(db, collectionName),
+          where('email', '==', formData.to)
+        );
+        const recipientSnapshot = await getDocs(recipientQuery);
+        
+        if (!recipientSnapshot.empty) {
+          recipientData = recipientSnapshot.docs[0].data();
+          break;
         }
       }
-
+  
+      // Send notification if recipient has FCM token
+      if (recipientData?.fcmToken) {
+        const sendNotification = httpsCallable(functions, 'sendNotification');
+        await sendNotification({
+          token: recipientData.fcmToken,
+          title: `New message from ${currentUser.email}`,
+          body: formData.subject,
+          data: {
+            messageId: messageRef.id,
+            type: 'new_message',
+            url: `/messages/${messageRef.id}`
+          }
+        });
+      }
+  
+      // Show success notification to sender
+      if (notificationEnabled) {
+        new Notification('Message Sent', {
+          body: `Your message "${formData.subject}" has been sent to ${formData.to}`,
+          icon: '/icons/icon.svg'
+        });
+      }
+  
       // Reset form and fetch updated messages
       setFormData({
         to: '',
@@ -275,8 +314,16 @@ const RequestForm = ({ onClose }) => {
       });
       setShowCompose(false);
       fetchMessages();
+  
     } catch (error) {
       console.error('Error sending message:', error);
+      // Show error notification if enabled
+      if (notificationEnabled) {
+        new Notification('Error Sending Message', {
+          body: 'There was an error sending your message. Please try again.',
+          icon: '/icons/icon.svg'
+        });
+      }
     }
   };
 
@@ -311,17 +358,30 @@ const RequestForm = ({ onClose }) => {
     setSelectedMessage(null);
     setIsSidebarOpen(false);
   };
-
-    // Add notification toggle to the header
-    const renderHeader = () => (
+  
+    const renderFormHeader = () => (
       <div className={styles.composeHeader}>
-        <button className={Buttons.buttons} onClick={() => handleFolderChange('inbox')}>BACK</button>
-        <h2 className={styles.headerTitle}>Messages</h2>
-        <div className={styles.headerActions}>
-          {!notificationEnabled && (
+         <button className={Buttons.buttons} onClick={() => handleFolderChange('inbox')}>BACK</button>
+         <h2 className={styles.headerTitle}>Messages</h2>
+          {!notificationEnabled && !isNotificationRequesting && (
             <button
-              onClick={handleEnableNotifications}
+            
+              onClick={async () => {
+                handleEnableNotifications();
+                setIsNotificationRequesting(true);
+                try {
+                  const token = await requestNotificationPermission(auth.currentUser?.uid);
+                  if (token) {
+                    setNotificationEnabled(true);
+                  }
+                } catch (error) {
+                  console.error('Error enabling notifications:', error);
+                } finally {
+                  setIsNotificationRequesting(false);
+                }
+              }}
               className={`${styles.notificationButton} ${Buttons.buttons}`}
+              disabled={isNotificationRequesting}
               title="Enable notifications"
             >
               <Bell />
@@ -333,7 +393,6 @@ const RequestForm = ({ onClose }) => {
           >
             <Menu />
           </button>
-        </div>
       </div>
     );
 
@@ -341,7 +400,7 @@ const RequestForm = ({ onClose }) => {
     <>
       <div className={`${styles.formOverlay} ${isMinimized ? '' : styles.visible}`} onClick={onClose} />
       <div className={`${styles.composeWrapper} ${isMinimized ? styles.minimized : ''}`}>
-      {renderHeader()}
+      {renderFormHeader()}
 
         {/* Main Content */}
         <div className={styles.mainContent}>
