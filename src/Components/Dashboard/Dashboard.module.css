@@ -348,6 +348,29 @@
   max-width: 600px;
 }
 
+.offlineIndicator {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 8px;
+  text-align: center;
+  z-index: 1000;
+  border-bottom: 1px solid #ffeeba;
+}
+
+/* Adjust sidebar top position when offline indicator is present */
+.sidebar {
+  top: var(--sidebar-top-offset, 0);
+}
+
+/* Add this class when offline indicator is present */
+.sidebarWithOfflineIndicator {
+  --sidebar-top-offset: 40px;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .welcomeContainer {
@@ -370,13 +393,13 @@
       transition: left 0.5s ease-in-out;
       width: 250px;
       z-index: 1000;
-      height: 102%;
+      height: 103%;
       margin-top: -30px;
     }
   
     .sidebarOpen {
       left: 0;
-      height: 102%;
+      height: 103%;
       /* margin-top: -30px; */
     }
   

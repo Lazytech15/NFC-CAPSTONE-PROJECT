@@ -2,7 +2,9 @@
 body{
   font-family: var(--f2);
   background-image: url('./assets/login_cover.png');
-  /* background-repeat: no-repeat; */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
 }
 .login_container {
     display: flex;
@@ -214,6 +216,13 @@ body{
   }
   
   @media (max-width: 600px) {
+    body{
+      background-position: initial;
+      background-size: initial;
+    }
+    .login_container{
+      width: 90%;
+    }
     .login_card {
       padding: 1.5rem;
       width: 70%;

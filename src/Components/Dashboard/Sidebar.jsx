@@ -21,6 +21,52 @@ import {
 import { getAuth, signOut } from "firebase/auth";
 import { getFirestore, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
+// Initialize IndexedDB
+const initIndexedDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('userDataDB', 1);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('userData')) {
+        db.createObjectStore('userData', { keyPath: 'email' });
+      }
+    };
+  });
+};
+
+// Save user data to IndexedDB
+const saveToIndexedDB = async (userData) => {
+  try {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(['userData'], 'readwrite');
+    const store = transaction.objectStore('userData');
+    await store.put(userData);
+  } catch (error) {
+    console.error('Error saving to IndexedDB:', error);
+  }
+};
+
+// Get user data from IndexedDB
+const getFromIndexedDB = async (email) => {
+  try {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(['userData'], 'readonly');
+    const store = transaction.objectStore('userData');
+    return new Promise((resolve, reject) => {
+      const request = store.get(email);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error reading from IndexedDB:', error);
+    return null;
+  }
+};
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -32,21 +78,39 @@ const Sidebar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const auth = getAuth();
   const db = getFirestore();
 
+    // Monitor online/offline status
+    useEffect(() => {
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+  
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+  
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }, []);
+
   useEffect(() => { 
-    const unsubscribe = auth.onAuthStateChanged(async (user) => { 
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setCurrentUser(user);
-      setIsLoading(true);  
-      if (user) { 
-        const email = user.email; 
-        const userData = await fetchUserData(email); 
+      setIsLoading(true);
+      
+      if (user) {
+        const email = user.email;
+        const userData = await fetchUserData(email);
+        userData.photoURL = user.photoURL; // Add photoURL to userData 
+        await saveToIndexedDB(userData); // Save userData to IndexedDB
         setUserData(userData);
         navigate('/dashboard', { state: { userData } });
       }
-      setIsLoading(false); 
-    }); 
+      setIsLoading(false);
+    });
 
     // Check and cleanup any existing NDEFReader
     const checkAndCleanupNFC = async () => {
@@ -117,29 +181,37 @@ const Sidebar = () => {
 
   
   
-  const fetchUserData = async (email) => { 
-    try { 
-      // Check in RegisteredAdmin collection 
-      const adminQuery = query( collection(db, "RegisteredAdmin"), where("email", "==", email) ); 
-      const adminSnapshot = await getDocs(adminQuery); 
-      if (!adminSnapshot.empty) { 
-        return adminSnapshot.docs[0].data(); 
-      } // Check in RegisteredTeacher collection 
-      const teacherQuery = query( collection(db, "RegisteredTeacher"), where("email", "==", email) ); 
-      const teacherSnapshot = await getDocs(teacherQuery); 
-      if (!teacherSnapshot.empty) { 
-        return teacherSnapshot.docs[0].data(); 
-      } // Check in RegisteredStudent collection 
-      const studentQuery = query( collection(db, "RegisteredStudent"), where("email", "==", email) ); 
-      const studentSnapshot = await getDocs(studentQuery); 
-      if (!studentSnapshot.empty) { 
-        return studentSnapshot.docs[0].data(); 
-      } return null; 
-      } catch (error) { 
-        console.error("Error fetching user data:", error); 
-        return null; 
-      } 
-    };
+  const fetchUserData = async (email) => {
+    try {
+      // First try to get data from IndexedDB
+      const cachedData = await getFromIndexedDB(email);
+      
+      if (!isOnline) {
+        return cachedData; // Return cached data when offline
+      }
+
+      // If online, fetch from Firestore
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+      
+      for (const collectionName of collections) {
+        const q = query(collection(db, collectionName), where("email", "==", email));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const userData = snapshot.docs[0].data();
+          // Save to IndexedDB for offline access
+          await saveToIndexedDB(userData);
+          return userData;
+        }
+      }
+
+      return cachedData || null;
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      // Return cached data if fetch fails
+      return await getFromIndexedDB(email);
+    }
+  };
 
     const handleCreateEventClick = () => {
       if (userData) {
@@ -218,6 +290,12 @@ const Sidebar = () => {
 
   return (
     <>
+    {/* Add offline indicator */}
+      {!isOnline && (
+      <div className={styles.offlineIndicator}>
+          You are currently offline. Some features may be limited.
+      </div>
+      )}
       <button className={styles.hamburgerBtn} onClick={toggleSidebar}>
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -227,7 +305,7 @@ const Sidebar = () => {
           {currentUser && userData && (
             <>
               <div className={styles.avatar}>
-                <img src={currentUser.photoURL || userData.selfieUrl} alt="Profile" />
+                <img src={currentUser.photoURL || userData.selfieUrl || userData.photoURL} alt="Profile" />
               </div>
               <div className={styles.userInfo}>
                 <h3>{userData.name}</h3>

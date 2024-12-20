@@ -4,7 +4,7 @@ import styles from './Requestmessage.module.css';
 import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { requestNotificationPermission } from '/utils/firebase-messaging';
+import { requestNotificationPermission, onMessageListener, showNotification } from '/utils/firebase-messaging';
 import Buttons from '../Button/Button.module.css';
 
 const RequestForm = ({ onClose }) => {
@@ -30,9 +30,70 @@ const RequestForm = ({ onClose }) => {
   const functions = getFunctions();
   const sidebarRef = useRef(null);
 
+  const findUserCollectionAndUpdate = async (email, updateData) => {
+    const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+    
+    for (const collectionName of collections) {
+      const q = query(collection(db, collectionName), where("email", "==", email));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const userDoc = snapshot.docs[0];
+        const userRef = doc(db, collectionName, userDoc.id);
+        console.log(useRef);
+        
+        // Update the document directly
+        await updateDoc(userRef, updateData);
+        
+        return {
+          collectionName,
+          docId: userDoc.id,
+          userData: { ...userDoc.data(), ...updateData }
+        };
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
-    fetchMessages();
-  }, [currentFolder]);
+    const unsubscribe = onMessageListener()
+      .then((payload) => {
+        const { title, body } = payload.notification;
+        showNotification(title, {
+          body,
+          icon: '/path/to/your/icon.png',
+          clickHandler: () => {
+            // Handle notification click
+            if (payload.data?.messageId) {
+              // Navigate to the message or update UI
+              const message = messages.find(m => m.id === payload.data.messageId);
+              if (message) {
+                setSelectedMessage(message);
+                setShowCompose(false);
+              }
+            }
+          }
+        });
+        
+        // Refresh messages list
+        fetchMessages();
+      })
+      .catch(err => console.error('Failed to process notification:', err));
+  
+    return () => unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        checkNotificationStatus();
+      } else {
+        setNotificationEnabled(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -53,13 +114,17 @@ const RequestForm = ({ onClose }) => {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
 
-      const userDoc = await getDocs(
-        query(collection(db, 'users'), where('email', '==', currentUser.email))
-      );
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
       
-      if (!userDoc.empty) {
-        const userData = userDoc.docs[0].data();
-        setNotificationEnabled(!!userData.fcmTokens);
+      for (const collectionName of collections) {
+        const q = query(collection(db, collectionName), where("email", "==", currentUser.email));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const userData = snapshot.docs[0].data();
+          setNotificationEnabled(!!userData.fcmToken); // Note: changed from fcmTokens to fcmToken
+          break;
+        }
       }
     } catch (error) {
       console.error('Error checking notification status:', error);
@@ -69,6 +134,7 @@ const RequestForm = ({ onClose }) => {
   const handleEnableNotifications = async () => {
     try {
       const currentUser = auth.currentUser;
+      console.log(currentUser);
       if (!currentUser) {
         alert('Please sign in to enable notifications');
         return;
@@ -76,10 +142,20 @@ const RequestForm = ({ onClose }) => {
 
       const token = await requestNotificationPermission(currentUser.uid);
       if (token) {
+        const userInfo = await findUserCollectionAndUpdate(currentUser.email, {
+          fcmToken: token // Note: using fcmToken instead of fcmTokens
+        });
+
+        if (!userInfo) {
+          alert('User not found in any collection');
+          return;
+        }
+
         setNotificationEnabled(true);
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
+      alert('Failed to enable notifications. Please try again.');
     }
   };
 
