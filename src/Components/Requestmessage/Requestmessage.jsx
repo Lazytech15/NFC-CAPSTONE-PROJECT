@@ -125,16 +125,25 @@ useEffect(() => {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
-
+  
       const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
-      
+  
       for (const collectionName of collections) {
-        const q = query(collection(db, collectionName), where("email", "==", currentUser.email));
+        const q = query(
+          collection(db, collectionName), 
+          where("email", "==", currentUser.email)
+        );
         const snapshot = await getDocs(q);
-        
+  
         if (!snapshot.empty) {
           const userData = snapshot.docs[0].data();
-          setNotificationEnabled(!!userData.fcmToken); // Note: changed from fcmTokens to fcmToken
+          // Check if fcmTokens array exists and has at least one valid token
+          const hasValidToken = userData.fcmTokens && 
+            Array.isArray(userData.fcmTokens) && 
+            userData.fcmTokens.length > 0 &&
+            userData.fcmTokens.some(tokenData => tokenData.token);
+          
+          setNotificationEnabled(hasValidToken);
           break;
         }
       }
