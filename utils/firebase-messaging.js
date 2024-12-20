@@ -36,7 +36,7 @@ export function showNotification(title, options) {
 
 export async function requestNotificationPermission(userId) {
   try {
-    await navigator.serviceWorker.register('/src/service worker.js', {
+    await navigator.serviceWorker.register('/NFC-CAPSTONE-PROJECT/firebase-messaging-sw.js', {
       scope: '/NFC-CAPSTONE-PROJECT/'
     });
 

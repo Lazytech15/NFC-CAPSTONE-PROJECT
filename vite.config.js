@@ -8,8 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       strategies: 'injectManifest',
-      srcDir: 'src',  // Changed to src directory
-      filename: 'service worker.js',  // Changed back to sw.js
+      srcDir: 'public', 
+      filename: 'firebase-messaging-sw.js',  
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg'],
       manifest: {
