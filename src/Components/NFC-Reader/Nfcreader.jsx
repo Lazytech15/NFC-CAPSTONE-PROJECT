@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import styles from './NFCReader.module.css';
+import styles from './Nfcreader.module.css';
 import Buttons from '../Button/Button.module.css';
 
 import { app } from '/utils/firebase-config.js';
