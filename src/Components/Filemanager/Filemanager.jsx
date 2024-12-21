@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FolderPlus, Upload, Folder, File, ArrowLeft, MoreVertical, X } from 'lucide-react';
 import { getStorage, ref, uploadBytes, listAll, getDownloadURL, deleteObject } from 'firebase/storage';
-import styles from './FileManager.module.css';
+import styles from './Filemanager.module.css';
 import Buttons from '../Button/Button.module.css';
 import Process_log from '../Process_log/Process_log.jsx';
 
