@@ -9,7 +9,7 @@ import EventList from './Components/Eventlist/Eventlist.jsx';
 import FileManager from './Components/Filemanager/Filemanager.jsx';
 import TeacherRegistration from './Components/Teacherregistration/Teacherregistration.jsx';
 import RegisteredTeachers from './Components/RegisteredTeacher/Registeredteacher.jsx';
-import RegisteredStudents from './Components/RegisteredStudent/RegisteredStudent.jsx';
+import RegisteredStudents from './Components/RegisteredStudent/Registeredstudent.jsx';
 import Process_log from './Components/Process_log/Process_log.jsx';
 import RequestForm from './Components/Requestmessage/Requestmessage.jsx';
 import NFCScanner from './Components/Dashboard/Nfcscanner/Nfcscanner.jsx';
