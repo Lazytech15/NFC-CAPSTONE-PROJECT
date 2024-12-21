@@ -18,7 +18,7 @@ import {
     signOut
   } from 'firebase/auth';
 
-import styles from './teacherregistration.module.css';
+import styles from './Teacherregistration.module.css';
 import Buttons from '../Button/Button.module.css';
 
 import { app } from '/utils/firebase-config.js';
