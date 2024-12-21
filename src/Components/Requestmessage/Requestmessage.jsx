@@ -157,37 +157,45 @@ useEffect(() => {
   };
   
   const handleNotificationConfirm = async () => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        alert('Please sign in to enable notifications');
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert('Please sign in to enable notifications');
+      return;
+    }
+
+    // First request notification permission
+    const permissionResult = await Notification.requestPermission();
+    if (permissionResult !== 'granted') {
+      alert('Notification permission denied. Please enable notifications in your browser settings.');
+      return;
+    }
+
+    // Then proceed with Firebase token request
+    const token = await requestNotificationPermission(currentUser.uid);
+    if (token) {
+      const userInfo = await findUserCollectionAndUpdate(currentUser.email, {
+        fcmTokens: [{
+          token: token,
+          lastUpdated: new Date().toISOString(),
+          device: navigator.userAgent
+        }]
+      });
+
+      if (!userInfo) {
+        alert('User not found in any collection');
         return;
       }
-  
-      const token = await requestNotificationPermission(currentUser.uid);
-      if (token) {
-        const userInfo = await findUserCollectionAndUpdate(currentUser.email, {
-          fcmTokens: [{
-            token: token,
-            lastUpdated: new Date().toISOString(),
-            device: navigator.userAgent
-          }]
-        });
-  
-        if (!userInfo) {
-          alert('User not found in any collection');
-          return;
-        }
-  
-        setNotificationEnabled(true);
-      }
-    } catch (error) {
-      console.error('Error enabling notifications:', error);
-      alert('Failed to enable notifications. Please try again.');
-    } finally {
-      setShowNotificationDialog(false);
+
+      setNotificationEnabled(true);
     }
-  };
+  } catch (error) {
+    console.error('Error enabling notifications:', error);
+    alert('Failed to enable notifications. Please try again.');
+  } finally {
+    setShowNotificationDialog(false);
+  }
+};
 
   const fetchMessages = async () => {
     try {
