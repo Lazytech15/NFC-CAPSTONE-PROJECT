@@ -3,7 +3,7 @@ import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, update
 import { Edit2, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-import styles from './EventList.module.css';
+import styles from './Eventlist.module.css';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
