@@ -274,54 +274,7 @@ useEffect(() => {
       console.error('Error updating message:', error);
     }
   };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-  
-      // If notifications aren't enabled, ask user if they want to enable them
-      if (!notificationEnabled && 'Notification' in window) {
-        const shouldEnable = window.confirm('Would you like to enable notifications to receive updates about your messages?');
-        if (shouldEnable) {
-          setIsNotificationRequesting(true);
-          try {
-            const token = await requestNotificationPermission(currentUser.uid);
-            if (token) {
-              setNotificationEnabled(true);
-            }
-          } catch (error) {
-            console.error('Error enabling notifications:', error);
-          } finally {
-            setIsNotificationRequesting(false);
-          }
-        }
-      }
-  
-      // Add message to Firestore
-      const messageRef = await addDoc(collection(db, 'Messages'), {
-        sendTo: formData.to,
-        subject: formData.subject,
-        message: formData.message,
-        sender: currentUser.email,
-        timestamp: serverTimestamp(),
-        read: false
-      });
-  
-      // Get recipient's user document
-      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
-      let recipientData = null;
-  
-      for (const collectionName of collections) {
-        const recipientQuery = query(
-          collection(db, collectionName),
-          where('email', '==', formData.to)
-        );
-        const recipientSnapshot = await getDocs(recipientQuery);
-        
-        if (!recipientSnapshot.empty) {
-          recipientData = recipientSnapshot.docs[0].data();
+
 const handleSubmit = async (e) => {
     e.preventDefault();
     try {
