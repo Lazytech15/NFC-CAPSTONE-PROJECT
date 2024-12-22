@@ -21,13 +21,32 @@ const RequestForm = ({ onClose }) => {
   const [isNotificationRequesting, setIsNotificationRequesting] = useState(false);
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const [hasClosedPrompt, setHasClosedPrompt] = useState(false);
-
+  const [swRegistration, setSwRegistration] = useState(null);
   // Add this useEffect to check notification status when component mounts
 useEffect(() => {
   if ('Notification' in window) {
     setNotificationEnabled(Notification.permission === 'granted');
   }
 }, []);
+
+  // Initialize service worker registration
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        setSwRegistration(registration);
+      });
+    }
+  }, []);
+
+  const showNotificationMessage = async (title, options) => {
+    if (!swRegistration) return;
+    
+    try {
+      await swRegistration.showNotification(title, options);
+    } catch (error) {
+      console.error('Error showing notification:', error);
+    }
+  };
 
   const [formData, setFormData] = useState({
     to: '',
@@ -303,10 +322,57 @@ useEffect(() => {
         
         if (!recipientSnapshot.empty) {
           recipientData = recipientSnapshot.docs[0].data();
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      // If notifications aren't enabled, ask user if they want to enable them
+      if (!notificationEnabled && 'Notification' in window) {
+        const shouldEnable = window.confirm('Would you like to enable notifications to receive updates about your messages?');
+        if (shouldEnable) {
+          setIsNotificationRequesting(true);
+          try {
+            const token = await requestNotificationPermission(currentUser.uid);
+            if (token) {
+              setNotificationEnabled(true);
+            }
+          } catch (error) {
+            console.error('Error enabling notifications:', error);
+          } finally {
+            setIsNotificationRequesting(false);
+          }
+        }
+      }
+
+      // Add message to Firestore
+      const messageRef = await addDoc(collection(db, 'Messages'), {
+        sendTo: formData.to,
+        subject: formData.subject,
+        message: formData.message,
+        sender: currentUser.email,
+        timestamp: serverTimestamp(),
+        read: false
+      });
+
+      // Get recipient's user document
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+      let recipientData = null;
+
+      for (const collectionName of collections) {
+        const recipientQuery = query(
+          collection(db, collectionName),
+          where('email', '==', formData.to)
+        );
+        const recipientSnapshot = await getDocs(recipientQuery);
+        
+        if (!recipientSnapshot.empty) {
+          recipientData = recipientSnapshot.docs[0].data();
           break;
         }
       }
-  
+
       // Send notification if recipient has FCM token
       if (recipientData?.fcmToken) {
         const sendNotification = httpsCallable(functions, 'sendNotification');
@@ -321,15 +387,15 @@ useEffect(() => {
           }
         });
       }
-  
-      // Show success notification to sender
-      if (notificationEnabled) {
-        new Notification('Message Sent', {
+
+      // Show success notification to sender using ServiceWorkerRegistration
+      if (notificationEnabled && swRegistration) {
+        await showNotificationMessage('Message Sent', {
           body: `Your message "${formData.subject}" has been sent to ${formData.to}`,
           icon: '/icons/icon.svg'
         });
       }
-  
+
       // Reset form and fetch updated messages
       setFormData({
         to: '',
@@ -339,12 +405,12 @@ useEffect(() => {
       });
       setShowCompose(false);
       fetchMessages();
-  
+
     } catch (error) {
       console.error('Error sending message:', error);
       // Show error notification if enabled
-      if (notificationEnabled) {
-        new Notification('Error Sending Message', {
+      if (notificationEnabled && swRegistration) {
+        await showNotificationMessage('Error Sending Message', {
           body: 'There was an error sending your message. Please try again.',
           icon: '/icons/icon.svg'
         });
