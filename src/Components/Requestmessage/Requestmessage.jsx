@@ -22,6 +22,15 @@ const RequestForm = ({ onClose }) => {
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const [hasClosedPrompt, setHasClosedPrompt] = useState(false);
   const [swRegistration, setSwRegistration] = useState(null);
+  const [showNotificationUI, setShowNotificationUI] = useState(true);
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      const isGranted = Notification.permission === 'granted';
+      setNotificationEnabled(isGranted);
+      setShowNotificationUI(!isGranted);
+    }
+  }, []);
   // Add this useEffect to check notification status when component mounts
 useEffect(() => {
   if ('Notification' in window) {
@@ -171,8 +180,50 @@ useEffect(() => {
     }
   };
 
-  const handleEnableNotifications = () => {
-    setShowNotificationDialog(true);
+  const handleEnableNotifications = async () => {
+    if (isNotificationRequesting) return;
+    
+    setIsNotificationRequesting(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        alert('Please sign in to enable notifications');
+        return;
+      }
+
+      const permissionResult = await Notification.requestPermission();
+      if (permissionResult !== 'granted') {
+        alert('Notification permission denied. Please enable notifications in your browser settings.');
+        return;
+      }
+
+      const token = await requestNotificationPermission(currentUser.uid);
+      if (token) {
+        const userInfo = await findUserCollectionAndUpdate(currentUser.email, {
+          fcmTokens: [{
+            token: token,
+            lastUpdated: new Date().toISOString(),
+            device: navigator.userAgent
+          }]
+        });
+
+        if (!userInfo) {
+          throw new Error('User not found in any collection');
+        }
+
+        setNotificationEnabled(true);
+        setShowNotificationUI(false);
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      alert('Failed to enable notifications. Please try again.');
+    } finally {
+      setIsNotificationRequesting(false);
+    }
+  };
+
+  const handleNotificationClose = () => {
+    setShowNotificationUI(false);
   };
   
   const handleNotificationConfirm = async () => {
@@ -403,42 +454,27 @@ const handleSubmit = async (e) => {
     setIsSidebarOpen(false);
   };
   
-    const renderFormHeader = () => (
-      <div className={styles.composeHeader}>
-         <button className={Buttons.buttons} onClick={() => handleFolderChange('inbox')}>BACK</button>
-         <h2 className={styles.headerTitle}>Messages</h2>
-          {!notificationEnabled && !isNotificationRequesting && (
-            <button
-            
-              onClick={async () => {
-                handleEnableNotifications();
-                setIsNotificationRequesting(true);
-                try {
-                  const token = await requestNotificationPermission(auth.currentUser?.uid);
-                  if (token) {
-                    setNotificationEnabled(true);
-                  }
-                } catch (error) {
-                  console.error('Error enabling notifications:', error);
-                } finally {
-                  setIsNotificationRequesting(false);
-                }
-              }}
-              className={`${styles.notificationButton} ${Buttons.buttons}`}
-              disabled={isNotificationRequesting}
-              title="Enable notifications"
-            >
-              <Bell />
-            </button>
-          )}
-          <button 
-            className={styles.hamburgerMenu} 
-            onClick={toggleSidebar}
-          >
-            <Menu />
-          </button>
-      </div>
-    );
+  const renderFormHeader = () => (
+    <div className={styles.composeHeader}>
+      <button className={Buttons.buttons} onClick={() => handleFolderChange('inbox')}>
+        BACK
+      </button>
+      <h2 className={styles.headerTitle}>Messages</h2>
+      {showNotificationUI && !notificationEnabled && !isNotificationRequesting && (
+        <button
+          onClick={handleEnableNotifications}
+          className={`${styles.notificationButton} ${Buttons.buttons}`}
+          disabled={isNotificationRequesting}
+          title="Enable notifications"
+        >
+          <Bell />
+        </button>
+      )}
+      <button className={styles.hamburgerMenu} onClick={toggleSidebar}>
+        <Menu />
+      </button>
+    </div>
+  );
 
   return (
     <>
@@ -601,8 +637,8 @@ const handleSubmit = async (e) => {
         /> */}
         <NotificationDialog 
           isEnabled={notificationEnabled}
-          onEnable={handleNotificationConfirm}
-          onClose={() => setHasClosedPrompt(true)}
+          onEnable={handleEnableNotifications}
+          onClose={handleNotificationClose}
         />
     </>
   );
