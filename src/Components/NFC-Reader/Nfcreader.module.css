@@ -256,6 +256,11 @@
     margin: 1rem 0;
     background-color: #e9ecef;
     border-radius: 4px;
+    /* width: 100%; */
+    display: flex;
+    /* align-content: center; */
+    justify-content: center;
+    
   }
   
   .error {
@@ -286,6 +291,18 @@
   
     .button {
       width: 100%;
+    }
+    .eventCard{
+      flex-direction: column;
+    }
+    .Sneakadd{
+      padding: 0;
+    }
+    .eventInfo{
+      align-items:normal;
+    }
+    .attendanceContainer{
+      overflow-y: auto;
     }
   }
 
