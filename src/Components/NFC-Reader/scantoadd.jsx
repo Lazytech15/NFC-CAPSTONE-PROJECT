@@ -109,8 +109,6 @@ const NFCReaderAttendance = () => {
         );
         const adminSnapshot = await getDocs(adminQuery);
         if (!adminSnapshot.empty) {
-          const userData = adminSnapshot.docs[0].data();
-          await signInWithEmailAndPassword(auth, userData.email, userData.upass);
           return 'admin';
         }
     
@@ -121,8 +119,6 @@ const NFCReaderAttendance = () => {
         );
         const teacherSnapshot = await getDocs(teacherQuery);
         if (!teacherSnapshot.empty) {
-          const userData = teacherSnapshot.docs[0].data();
-          await signInWithEmailAndPassword(auth, userData.email, userData.upass);
           return 'teacher';
         }
   
@@ -133,8 +129,6 @@ const NFCReaderAttendance = () => {
         );
         const studentSnapshot = await getDocs(studentQuery);
         if (!studentSnapshot.empty) {
-          const userData = studentSnapshot.docs[0].data();
-          await signInWithEmailAndPassword(auth, userData.email, userData.upass);
           return 'student';
         }
     
