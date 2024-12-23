@@ -223,7 +223,7 @@ const Login = () => {
 
     // Only initialize NFC if not logged in
     const checkNFCSupport = async () => {
-      if (isLoggedIn) return; // Don't initialize if logged in
+      if (isLoggedIn) return;
 
       if ('NDEFReader' in window) {
         try {
