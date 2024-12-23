@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import styles from './Nfcreader.module.css';
+import SneakingAttendance from './scantoadd.jsx'
 import Buttons from '../Button/Button.module.css';
 
 import { app } from '/utils/firebase-config.js';
@@ -74,6 +75,7 @@ const NFCReader = () => {
   };
 
   return (
+    <>
     <div className={styles.container}>
       <h1>Student NFC Reader</h1>
 
@@ -145,6 +147,10 @@ const NFCReader = () => {
         )}
       </div>
     </div>
+      <div className={styles.Sneakadd}>
+        <SneakingAttendance />
+      </div>
+    </>
   );
 };
 

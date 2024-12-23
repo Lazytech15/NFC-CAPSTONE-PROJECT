@@ -133,6 +133,140 @@
       opacity: 1;
     }
   }
+
+  /* sneakingAttendance */
+  .Sneakadd {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .eventsContainer {
+    margin-bottom: 2rem;
+  }
+  
+  .eventCard {
+    display: flex;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .eventCard:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  
+  .eventCard.selected {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+  }
+  
+  .eventCard img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 1rem;
+  }
+  
+  .eventInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  
+  .eventInfo h3 {
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    font-size: 0.875rem;
+  }
+  
+  .attendanceContainer {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .attendanceTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+  
+  .attendanceTable th,
+  .attendanceTable td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .attendanceTable th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+  }
+  
+  .userVerification {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .userInfo {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  
+  .selfie {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  
+  .infoGrid {
+    display: grid;
+    gap: 0.5rem;
+  }
+  
+  .controls {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .status {
+    padding: 1rem;
+    margin: 1rem 0;
+    background-color: #e9ecef;
+    border-radius: 4px;
+  }
+  
+  .error {
+    padding: 1rem;
+    margin: 1rem 0;
+    background-color: #fee2e2;
+    color: #dc2626;
+    border-radius: 4px;
+  }
+
+  /* end here */
   
   /* Responsive adjustments */
   @media (max-width: 640px) {
