@@ -101,6 +101,50 @@ const NFCReaderAttendance = () => {
     }
   };
 
+    const checkUserRoleByNFC = async (nfcId) => {
+      try {
+        const adminQuery = query(
+          collection(db, "RegisteredAdmin"),
+          where("currentnfcId", "==", nfcId)
+        );
+        const adminSnapshot = await getDocs(adminQuery);
+        if (!adminSnapshot.empty) {
+          const userData = adminSnapshot.docs[0].data();
+          await signInWithEmailAndPassword(auth, userData.email, userData.upass);
+          return 'admin';
+        }
+    
+        // Check in RegisteredTeacher collection
+        const teacherQuery = query(
+          collection(db, "RegisteredTeacher"),
+          where("currentnfcId", "==", nfcId)
+        );
+        const teacherSnapshot = await getDocs(teacherQuery);
+        if (!teacherSnapshot.empty) {
+          const userData = teacherSnapshot.docs[0].data();
+          await signInWithEmailAndPassword(auth, userData.email, userData.upass);
+          return 'teacher';
+        }
+  
+        // Check in RegisteredStudent collection
+        const studentQuery = query(
+          collection(db, "RegisteredStudent"),
+          where("currentnfcId", "==", nfcId)
+        );
+        const studentSnapshot = await getDocs(studentQuery);
+        if (!studentSnapshot.empty) {
+          const userData = studentSnapshot.docs[0].data();
+          await signInWithEmailAndPassword(auth, userData.email, userData.upass);
+          return 'student';
+        }
+    
+        return null;
+      } catch (error) {
+        console.error("Error checking user role by NFC:", error);
+        throw error;
+      }
+    };
+
   const confirmAttendance = async () => {
     if (!verifiedUser || !selectedEvent) return;
 
