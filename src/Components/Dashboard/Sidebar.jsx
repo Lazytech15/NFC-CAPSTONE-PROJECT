@@ -104,8 +104,8 @@ const Sidebar = () => {
       if (user) {
         const email = user.email;
         const userData = await fetchUserData(email);
-        userData.photoURL = user.photoURL; // Add photoURL to userData 
-        await saveToIndexedDB(userData); // Save userData to IndexedDB
+        userData.photoURL = user.photoURL; 
+        await saveToIndexedDB(userData);
         setUserData(userData);
         navigate('/dashboard', { state: { userData } });
       }
