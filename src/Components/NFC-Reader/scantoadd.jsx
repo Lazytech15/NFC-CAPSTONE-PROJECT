@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc,addDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import styles from './Nfcreader.module.css';
 import Buttons from '../Button/Button.module.css';
@@ -184,7 +184,16 @@ const NFCReaderAttendance = () => {
 
       {selectedEvent && (
         <div className={styles.attendanceContainer}>
+          <div className={styles.controls}>
           <h2>Attendance for {selectedEvent.eventName}</h2>
+            <button
+              onClick={startNFCRead}
+              disabled={isReading}
+              className={Buttons.buttons}
+            >
+              {isReading ? 'Reading...' : 'Scan Attendance'}
+            </button>
+          </div>
           <table className={styles.attendanceTable}>
             <thead>
               <tr>
@@ -209,16 +218,6 @@ const NFCReaderAttendance = () => {
               ))}
             </tbody>
           </table>
-
-          <div className={styles.controls}>
-            <button
-              onClick={startNFCRead}
-              disabled={isReading}
-              className={Buttons.buttons}
-            >
-              {isReading ? 'Reading...' : 'Scan Attendance'}
-            </button>
-          </div>
         </div>
       )}
 
