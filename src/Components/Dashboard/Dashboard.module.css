@@ -384,12 +384,12 @@
       transition: left 0.5s ease-in-out;
       width: 250px;
       z-index: 1000;
-      height: 100vh;
+      height: 100%;
     }
   
     .sidebarOpen {
       left: 0;
-      height: 100vh;
+      height: 100%;
       /* margin-top: -30px; */
     }
   
