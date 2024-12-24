@@ -4,17 +4,86 @@ import { Edit2, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import styles from './Eventlist.module.css';
+import { getDatabase, ref, onValue, off } from 'firebase/database';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedScanner, setSelectedScanner] = useState(null);
+  const [scannerStatus, setScannerStatus] = useState(null);
+  const [attendanceData, setAttendanceData] = useState([]);
   const navigate = useNavigate();
   const db = getFirestore();
+  const realtimeDb = getDatabase();
   const auth = getAuth();
 
   useEffect(() => {
     fetchEvents();
+    return () => {
+      // Cleanup realtime listeners when component unmounts
+      if (selectedScanner) {
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedScanner.Unique_id}/attendees`);
+        off(attendanceRef);
+      }
+    };
   }, []);
+
+    // Effect to check scanner status when an event is selected
+    useEffect(() => {
+      if (selectedEvent) {
+        checkScannerDevice();
+      }
+    }, [selectedEvent]);
+
+    useEffect(() => {
+      if (selectedScanner && selectedEvent) {
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedScanner.Unique_id}/attendees`);
+        
+        onValue(attendanceRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            // Convert object to array and filter for current event
+            const attendanceArray = Object.entries(data)
+              .map(([key, value]) => ({
+                id: key,
+                ...value
+              }))
+              .filter(record => record.eventId === selectedEvent.id);
+            
+            setAttendanceData(attendanceArray);
+          } else {
+            setAttendanceData([]);
+          }
+        });
+      }
+    }, [selectedScanner, selectedEvent]);
+
+    const checkScannerDevice = async () => {
+      try {
+        const scannersRef = collection(db, 'ScannerDevices');
+        const querySnapshot = await getDocs(scannersRef);
+        
+        querySnapshot.forEach((doc) => {
+          const scannerData = doc.data();
+          if (scannerData.name === selectedEvent.selectedscanner) {
+            setSelectedScanner({
+              id: doc.id,
+              ...scannerData
+            });
+            
+            if (scannerData.isActivated && scannerData.job) {
+              setScannerStatus('in-use');
+            } else if (scannerData.isActivated && !scannerData.job) {
+              setScannerStatus('ready');
+            } else {
+              setScannerStatus('inactive');
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error checking scanner device:', error);
+      }
+    };
 
   const fetchEvents = async () => {
     try {
@@ -38,20 +107,19 @@ const EventList = () => {
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     
-    if (timestamp.toDate) {
-      return timestamp.toDate().toLocaleDateString('en-US', {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', {
         month: '2-digit',
         day: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
       });
+    } catch (error) {
+      return timestamp;
     }
-    
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    });
   };
 
   const handleEdit = (eventId) => {
@@ -72,9 +140,40 @@ const EventList = () => {
 
   const handleContinue = async (event) => {
     try {
+      // Check if scanner is available
+      if (scannerStatus === 'in-use') {
+        alert('This scanner is currently being used by another job');
+        return;
+      }
+
+      if (scannerStatus !== 'ready') {
+        alert('Scanner is not activated or unavailable');
+        return;
+      }
+
+      // Update event status
       await updateDoc(doc(db, 'PendingEvent', event.id), {
         status: 'in-progress'
       });
+
+      // Create realtime database reference for scanned cards
+      if (selectedScanner) {
+        const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedScanner.Unique_id}`);
+        
+        // Initialize the collection in realtime database
+        await set(scanDataRef, {
+          eventId: event.id,
+          eventName: event.eventName,
+          startTime: new Date().toISOString(),
+          scannedCards: []
+        });
+
+        // Update scanner job status
+        await updateDoc(doc(db, 'ScannerDevices', selectedScanner.id), {
+          job: event.id
+        });
+      }
+
       fetchEvents();
       setSelectedEvent(null);
     } catch (error) {
@@ -165,6 +264,17 @@ const EventList = () => {
               <p><strong>End Time:</strong> {selectedEvent.endTime}</p>
             </div>
 
+            {scannerStatus && (
+              <div className={styles.scanner_status}>
+                <div className={`${styles.status_indicator} ${styles[scannerStatus]}`} />
+                <span>
+                  {scannerStatus === 'in-use' && 'Scanner is currently in use'}
+                  {scannerStatus === 'ready' && 'Scanner is ready'}
+                  {scannerStatus === 'inactive' && 'Scanner is inactive'}
+                </span>
+              </div>
+            )}
+
             <div className={styles.modal_actions}>
               <button
                 className={styles.continue_btn}
@@ -203,13 +313,13 @@ const EventList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedEvent.attendees?.map((attendee, index) => (
-                    <tr key={index}>
+                  {attendanceData.map((attendee, index) => (
+                    <tr key={attendee.id}>
                       <td>{attendee.studentId}</td>
-                      <td>{attendee.name}</td>
+                      <td>{attendee.studentName}</td>
                       <td>{attendee.course}</td>
                       <td>{attendee.campus}</td>
-                      <td>{formatDate(attendee.dateAttended)}</td>
+                      <td>{formatDate(attendee.dateTimeIn)}</td>
                       <td>
                         <div className={styles.action_buttons}>
                           <button
@@ -218,12 +328,6 @@ const EventList = () => {
                           >
                             <Edit2 size={16} />
                           </button>
-                          {/* <button
-                            className={styles.delete_btn}
-                            onClick={() => handleDelete(selectedEvent.id)}
-                          >
-                            <Trash2 size={16} />
-                          </button> */}
                         </div>
                       </td>
                     </tr>

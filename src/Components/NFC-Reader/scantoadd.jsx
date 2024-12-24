@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, getDoc,addDoc } from 'firebase/firestore';
+import { getDatabase, ref, push, get, onValue } from 'firebase/database';
 import { format } from 'date-fns';
 import styles from './Nfcreader.module.css';
 import Buttons from '../Button/Button.module.css';
@@ -15,10 +16,34 @@ const NFCReaderAttendance = () => {
   const [status, setStatus] = useState('');
   const [error, setError] = useState(null);
   const db = getFirestore();
+  const realtimeDb = getDatabase();
 
   useEffect(() => {
     fetchEvents();
   }, []);
+
+    // Add new effect to listen to realtime attendance data
+    useEffect(() => {
+      if (selectedEvent) {
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.selectedscanner}/attendees`);
+        const unsubscribe = onValue(attendanceRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            // Convert object to array and update state
+            const attendanceArray = Object.entries(data).map(([key, value]) => ({
+              id: key,
+              ...value
+            }));
+            setAttendanceData(attendanceArray);
+          } else {
+            setAttendanceData([]);
+          }
+        });
+  
+        // Cleanup subscription
+        return () => unsubscribe();
+      }
+    }, [selectedEvent]);
 
   const fetchEvents = async () => {
     try {
@@ -55,7 +80,7 @@ const NFCReaderAttendance = () => {
       setError('Please select an event first');
       return;
     }
-
+  
     try {
       setIsReading(true);
       setStatus('Waiting for NFC card...');
@@ -63,7 +88,7 @@ const NFCReaderAttendance = () => {
       
       const ndef = new NDEFReader();
       await ndef.scan();
-
+  
       ndef.addEventListener("reading", async ({ message }) => {
         try {
           const nfcId = new TextDecoder().decode(message.records[0].data);
@@ -74,7 +99,8 @@ const NFCReaderAttendance = () => {
             const collectionName = `Registered${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`;
             const userQuery = query(
               collection(db, collectionName),
-              where("currentnfcId", "==", nfcId)
+              where("currentnfcId", "==", nfcId),
+              where("position", "==", "student")
             );
             const userSnap = await getDocs(userQuery);
             
@@ -83,6 +109,9 @@ const NFCReaderAttendance = () => {
                 ...userSnap.docs[0].data(),
                 role: userRole
               });
+            } else {
+              console.log('Only accept student');
+              throw new Error('Unauthorized NFC card');
             }
           } else {
             throw new Error('Unauthorized NFC card');
@@ -100,6 +129,7 @@ const NFCReaderAttendance = () => {
       setIsReading(false);
     }
   };
+  
 
     const checkUserRoleByNFC = async (nfcId) => {
       try {
@@ -139,27 +169,35 @@ const NFCReaderAttendance = () => {
       }
     };
 
-  const confirmAttendance = async () => {
-    if (!verifiedUser || !selectedEvent) return;
-
-    try {
-      const attendanceRef = collection(db, `PendingEvent/${selectedEvent.id}/attendance`);
-      await addDoc(attendanceRef, {
-        studentId: verifiedUser.studentId || verifiedUser.adminId || verifiedUser.teacherId,
-        studentName: verifiedUser.name,
-        course: verifiedUser.course || verifiedUser.department,
-        campus: verifiedUser.campus,
-        dateTimeIn: new Date().toISOString(),
-        role: verifiedUser.role
-      });
-
-      // Refresh attendance data
-      handleEventClick(selectedEvent);
-      setVerifiedUser(null);
-    } catch (error) {
-      setError('Failed to record attendance: ' + error.message);
-    }
-  };
+    const confirmAttendance = async () => {
+      if (!verifiedUser || !selectedEvent) return;
+  
+      try {
+        // Reference to the specific scanner's attendance data in realtime database
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.selectedscanner}/attendees`);
+  
+        // Create attendance record
+        const attendanceRecord = {
+          studentId: verifiedUser.studentId || verifiedUser.adminId || verifiedUser.teacherId,
+          studentName: verifiedUser.name,
+          course: verifiedUser.course || verifiedUser.department,
+          campus: verifiedUser.campus,
+          dateTimeIn: new Date().toISOString(),
+          role: verifiedUser.role,
+          eventId: selectedEvent.id,
+          eventName: selectedEvent.eventName
+        };
+  
+        // Push new attendance record to realtime database
+        await push(attendanceRef, attendanceRecord);
+  
+        // Update status and clear verified user
+        setStatus('Attendance recorded successfully');
+        setVerifiedUser(null);
+      } catch (error) {
+        setError('Failed to record attendance: ' + error.message);
+      }
+    };
 
   return (
     <div className={styles.container}>
@@ -185,7 +223,7 @@ const NFCReaderAttendance = () => {
       {selectedEvent && (
         <div className={styles.attendanceContainer}>
           <div className={styles.controls}>
-          <h2>Attendance for {selectedEvent.eventName}</h2>
+            <h2>Attendance for {selectedEvent.eventName}</h2>
             <button
               onClick={startNFCRead}
               disabled={isReading}

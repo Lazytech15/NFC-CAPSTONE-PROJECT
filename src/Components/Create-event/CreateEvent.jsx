@@ -21,7 +21,7 @@ const CreateEvent = () => {
   const [locations, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [purpose, setPurpose] = useState('event');
-  // const [selectedEsp32, setSelectedEsp32] = useState('');
+  const [selectedscanner, setSelectedScanner] = useState('');
   const [status, setStatus] = useState('pending');
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -75,6 +75,7 @@ const CreateEvent = () => {
         maxEntries: entryLimit === 'limited' ? parseInt(maxEntries) : null,
         locations,
         description,
+        selectedscanner,
         purpose,
         status,
         startDate,
@@ -103,7 +104,7 @@ const CreateEvent = () => {
     setMaxEntries('');
     setLocation('');
     setPurpose('event');
-    // setSelectedEsp32('');
+    setSelectedScanner('');
     setDescription('');
     setStatus('pending');
     setStartDate('');
@@ -120,18 +121,6 @@ const CreateEvent = () => {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Create New Event</h2>
-            <div className={`${styles.imageUpload} ${eventImage ? styles.hasImage : ''}`}>
-              <ImagePlus size={20} className={styles.imageUploadIcon} />
-              <label className={styles.label}>
-                {eventImage ? 'Image Selected' : 'Event Image (Optional)'}
-              </label> 
-              <input 
-                type="file" 
-                accept="image/*"
-                onChange={handleImageChange}
-                className={styles.imageInput}
-              />
-            </div>
         </div>
         
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -198,13 +187,13 @@ const CreateEvent = () => {
               </select>
             </div>
 
-            {/* <div className={styles.formGroup}>
-              <label className={styles.label}>ESP32 Device</label>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Scanner Device</label>
               <select 
                 className={styles.select}
-                value={selectedEsp32}
-                name="ESP32 Device"
-                onChange={(e) => setSelectedEsp32(e.target.value)}
+                value={selectedscanner}
+                name="Scanner Device"
+                onChange={(e) => setSelectedScanner(e.target.value)}
               >
                 {esp32Devices.map((device) => (
                   <option key={device} value={device}>
@@ -212,7 +201,7 @@ const CreateEvent = () => {
                   </option>
                 ))}
               </select>
-            </div> */}
+            </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Description</label>
@@ -282,6 +271,20 @@ const CreateEvent = () => {
                 value={endTime}
                 name="End Time"
                 onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
+
+            
+            <div className={`${styles.imageUpload} ${eventImage ? styles.hasImage : ''}`}>
+              <ImagePlus size={20} className={styles.imageUploadIcon} />
+              <label className={styles.label}>
+                {eventImage ? 'Image Selected' : 'Event Image (Optional)'}
+              </label> 
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={handleImageChange}
+                className={styles.imageInput}
               />
             </div>
 
