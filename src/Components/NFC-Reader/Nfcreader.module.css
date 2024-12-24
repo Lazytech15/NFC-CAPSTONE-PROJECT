@@ -153,6 +153,7 @@
     margin-bottom: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    align-items: center;
   }
   
   .eventCard:hover {
@@ -233,6 +234,14 @@
     align-items: start;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .userInfo img {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
   }
   
   .selfie {
