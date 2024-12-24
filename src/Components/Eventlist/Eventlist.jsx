@@ -4,7 +4,8 @@ import { Edit2, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import styles from './Eventlist.module.css';
-import { getDatabase, ref, onValue, off } from 'firebase/database';
+import { getDatabase, ref, onValue, off, set } from 'firebase/database';
+import Buttons from '../Button/Button.module.css';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -22,7 +23,7 @@ const EventList = () => {
     return () => {
       // Cleanup realtime listeners when component unmounts
       if (selectedScanner) {
-        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedScanner.Unique_id}/attendees`);
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedScanner.name}/attendees`);
         off(attendanceRef);
       }
     };
@@ -37,7 +38,7 @@ const EventList = () => {
 
     useEffect(() => {
       if (selectedScanner && selectedEvent) {
-        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedScanner.Unique_id}/attendees`);
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedScanner.name}/attendees`);
         
         onValue(attendanceRef, (snapshot) => {
           if (snapshot.exists()) {
@@ -158,7 +159,7 @@ const EventList = () => {
 
       // Create realtime database reference for scanned cards
       if (selectedScanner) {
-        const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedScanner.Unique_id}`);
+        const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedScanner.name}`);
         
         // Initialize the collection in realtime database
         await set(scanDataRef, {
@@ -233,12 +234,7 @@ const EventList = () => {
       {selectedEvent && (
         <div className={styles.modal_overlay} onClick={() => setSelectedEvent(null)}>
           <div className={styles.modal_content} onClick={e => e.stopPropagation()}>
-            <button 
-              className={styles.close_button}
-              onClick={() => setSelectedEvent(null)}
-            >
-              <X size={24} />
-            </button>
+
             
             <div className={styles.modal_image_container}>
               {selectedEvent.imageUrl ? (
@@ -277,25 +273,32 @@ const EventList = () => {
 
             <div className={styles.modal_actions}>
               <button
-                className={styles.continue_btn}
+                className={Buttons.buttons}
                 onClick={() => handleContinue(selectedEvent)}
               >
                 Continue
               </button>
 
               <button
-                className={styles.complete_btn}
+                className={Buttons.buttons}
                 onClick={() => handleComplete(selectedEvent)}
               >
                 Complete
               </button>
 
               <button
-                className={styles.complete_btn}
+                className={Buttons.buttons}
                 onClick={() => handleDelete(selectedEvent.id)}
               >
                Delete event
               </button>
+              
+              <button 
+              className={Buttons.buttons}
+              onClick={() => setSelectedEvent(null)}
+            >
+              <X size={24} />
+            </button>
             </div>
 
             <br />

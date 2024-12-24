@@ -29,6 +29,7 @@ const NFCReaderAttendance = () => {
         const unsubscribe = onValue(attendanceRef, (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
+            console.log(data);
             // Convert object to array and update state
             const attendanceArray = Object.entries(data).map(([key, value]) => ({
               id: key,
