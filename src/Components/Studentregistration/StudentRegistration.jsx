@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { useNavigate } from 'react-router-dom';
+import nodemailer from 'nodemailer';
 
 import { 
   getFirestore, doc, getDoc, addDoc, 
@@ -265,6 +266,8 @@ const handleSignOut = async () => {
       await updateDoc(docRef, { 
         firebaseUserId: firebaseUser.uid 
       });
+
+      await sendRegistrationEmail(formData);
   
       // Final success message
       updateStatus('Registration completed! Please check your email for verification.', 'success');
@@ -352,6 +355,45 @@ const handleSignOut = async () => {
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
+    }
+  };
+
+  
+  const sendRegistrationEmail = async (studentData) => {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'capstoneantipoloicct@gmail.com',
+        pass: 'capstonepassword'
+      }
+    });
+
+    const mailOptions = {
+      from: 'capstoneantipoloicct@gmail.com',
+      to: studentData.email,
+      subject: 'Welcome to ICCT Colleges',
+      text: `
+Dear ${studentData.name},
+
+Thank you for registering at ICCT Colleges. Here are your registration details:
+
+Student ID: ${studentData.studentId}
+Course: ${studentData.course}
+Campus: ${studentData.campus}
+
+Please verify your email to complete the registration process.
+
+Best regards,
+ICCT Colleges
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      updateStatus('Registration email sent successfully', 'success');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      updateStatus('Registration completed, but email notification failed', 'warning');
     }
   };
 
