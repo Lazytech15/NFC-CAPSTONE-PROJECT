@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
 import { useNavigate } from 'react-router-dom';
-import nodemailer from 'nodemailer';
 
 import { 
   getFirestore, doc, getDoc, addDoc, 
@@ -85,6 +83,7 @@ const StudentRegistration = () => {
   const [nfcReader, setNfcReader] = useState(null);
   const [statusType, setStatusType] = useState('info');
   const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
@@ -267,8 +266,6 @@ const handleSignOut = async () => {
         firebaseUserId: firebaseUser.uid 
       });
 
-      await sendRegistrationEmail(formData);
-  
       // Final success message
       updateStatus('Registration completed! Please check your email for verification.', 'success');
       
@@ -332,6 +329,28 @@ const handleSignOut = async () => {
     }
   };
 
+  const processNetlifyForm = async (formData) => {
+    try {
+      const netlifyFormData = new FormData();
+      netlifyFormData.append('form-name', 'student-registration');
+      
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        netlifyFormData.append(key, formData[key]);
+      });
+
+      // Send to Netlify's form handling endpoint
+      await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(netlifyFormData).toString()
+      });
+    } catch (error) {
+      console.error('Netlify form submission error:', error);
+      // Continue with rest of registration even if Netlify form fails
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -341,6 +360,9 @@ const handleSignOut = async () => {
     }
 
     try {
+      // Process Netlify form first
+      await processNetlifyForm(formData);
+      
       updateStatus('Waiting for NFC tag... Please place your card', 'info');
       await scanNfcTag();
       updateStatus('NFC tag detected successfully!', 'success');
@@ -358,48 +380,19 @@ const handleSignOut = async () => {
     }
   };
 
-  
-  const sendRegistrationEmail = async (studentData) => {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'capstoneantipoloicct@gmail.com',
-        pass: 'capstonepassword'
-      }
-    });
-
-    const mailOptions = {
-      from: 'capstoneantipoloicct@gmail.com',
-      to: studentData.email,
-      subject: 'Welcome to ICCT Colleges',
-      text: `
-Dear ${studentData.name},
-
-Thank you for registering at ICCT Colleges. Here are your registration details:
-
-Student ID: ${studentData.studentId}
-Course: ${studentData.course}
-Campus: ${studentData.campus}
-
-Please verify your email to complete the registration process.
-
-Best regards,
-ICCT Colleges
-      `
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      updateStatus('Registration email sent successfully', 'success');
-    } catch (error) {
-      console.error('Error sending email:', error);
-      updateStatus('Registration completed, but email notification failed', 'warning');
-    }
-  };
-
   return (
     <div className={styles.container}>
       <h1>Student Registration</h1>
+
+      {/* Hidden Netlify form */}
+      <form name="student-registration" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
+        <input type="hidden" name="form-name" value="student-registration" />
+        <input type="text" name="name" />
+        <input type="email" name="email" />
+        <input type="text" name="course" />
+        <input type="text" name="studentId" />
+        <input type="text" name="campus" />
+      </form>
 
       {/* Status Modal */}
       {(!('NDEFReader' in window) || status) && (
@@ -410,9 +403,24 @@ ICCT Colleges
         />
       )}
       
-      <form onSubmit={handleSubmit} className={styles.form}>
+      {/* Your existing form with Netlify attributes added */}
+      <form 
+        onSubmit={handleSubmit} 
+        className={styles.form}
+        name="student-registration"
+        method="POST"
+        data-netlify="true"
+        data-netlify-honeypot="bot-field"
+      >
+        <input type="hidden" name="form-name" value="student-registration" />
+        {/* Honeypot field */}
+        <p hidden>
+          <label>Don't fill this out: <input name="bot-field" /></label>
+        </p>
+
         <input
           type="text"
+          name="name"
           placeholder="Student Name"
           value={formData.name}
           onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -422,6 +430,7 @@ ICCT Colleges
         
         <input
           type="email"
+          name="email"
           placeholder="Email"
           value={formData.email}
           onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -431,6 +440,7 @@ ICCT Colleges
 
         <input
           type="text"
+          name="course"
           placeholder="Course"
           value={formData.course}
           onChange={(e) => setFormData({...formData, course: e.target.value})}
@@ -440,6 +450,7 @@ ICCT Colleges
 
         <input
           type="text"
+          name="studentId"
           placeholder="Student ID"
           value={formData.studentId}
           onChange={(e) => setFormData({...formData, studentId: e.target.value})}
@@ -449,6 +460,7 @@ ICCT Colleges
 
         <input
           type="text"
+          name="upass"
           placeholder="Password"
           value={formData.upass}
           onChange={(e) => setFormData({...formData, upass: e.target.value})}
@@ -457,6 +469,7 @@ ICCT Colleges
         />
         
         <select
+          name="campus"
           value={formData.campus}
           onChange={(e) => setFormData({...formData, campus: e.target.value})}
           required
@@ -473,6 +486,7 @@ ICCT Colleges
           <option value="Cogeo Campus">Cogeo Campus</option>
         </select>
 
+        {/* Keep your existing image upload section */}
         <div className={styles.uploadOptionContainer}>
           <label>
             <input
@@ -498,7 +512,6 @@ ICCT Colleges
           </label>
         </div>
         
-        {/* Conditional rendering based on upload option */}
         {uploadOption === 'capture' ? (
           <>
             <input 
@@ -540,7 +553,6 @@ ICCT Colleges
           </>
         )}
         
-        {/* Show selected image name if image is selected */}
         {selfie && (
           <p>
             Selected Image: {selfie.name} 
