@@ -74,14 +74,11 @@ const StudentRegistration = () => {
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState('info');
   const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
+  const [nfcReader, setNfcReader] = useState(null);
+  const [nfcController, setNfcController] = useState(null);
   
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
-
-  const [nfcReader, setNfcReader] = useState({
-    reader: null,
-    controller: null
-  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -98,12 +95,23 @@ const StudentRegistration = () => {
   };
 
   useEffect(() => {
+    // Cleanup function
     return () => {
-      if (nfcReader.controller) {
-        nfcReader.controller.abort();
-      }
+      cleanupNfcReader();
     };
-  }, [nfcReader]);
+  }, []);
+
+  const cleanupNfcReader = () => {
+    if (nfcController) {
+      try {
+        nfcController.abort();
+        setNfcController(null);
+        setNfcReader(null);
+      } catch (error) {
+        console.error('Error cleaning up NFC reader:', error);
+      }
+    }
+  };
 
   const handleSelfie = (e) => {
     const file = e.target.files[0];
@@ -147,14 +155,16 @@ const StudentRegistration = () => {
       throw new Error('NFC not supported on this device');
     }
 
+    // Cleanup any existing NFC reader
+    cleanupNfcReader();
+
     try {
-      setStatus('Waiting for NFC tag...');
+      updateStatus('Waiting for NFC tag...', 'info');
       const controller = new AbortController();
       const ndef = new NDEFReader();
-      setNfcReader({
-        reader: ndef,
-        controller: controller
-      });
+      
+      setNfcController(controller);
+      setNfcReader(ndef);
 
       await ndef.scan({ signal: controller.signal });
 
@@ -178,6 +188,7 @@ const StudentRegistration = () => {
 
         ndef.addEventListener("reading", handleReading);
 
+        // Set timeout for NFC reading
         setTimeout(() => {
           ndef.removeEventListener("reading", handleReading);
           reject(new Error('NFC tag read timeout'));
@@ -191,13 +202,7 @@ const StudentRegistration = () => {
       updateStatus(error.message, 'error');
       throw error;
     } finally {
-      if (nfcReader.controller) {
-        nfcReader.controller.abort();
-        setNfcReader({
-          reader: null,
-          controller: null
-        });
-      }
+      cleanupNfcReader();
     }
   };
 
@@ -366,7 +371,6 @@ const StudentRegistration = () => {
     }
 
     try {
-      // Process Netlify form first
       await processNetlifyForm(formData);
       
       updateStatus('Waiting for NFC tag... Please place your card', 'info');
@@ -376,6 +380,7 @@ const StudentRegistration = () => {
       if (!window.confirm('Do you want to complete the registration?')) {
         setNfcSerialNumber(null);
         updateStatus('');
+        cleanupNfcReader();
         return;
       }
 
@@ -383,6 +388,8 @@ const StudentRegistration = () => {
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
+    } finally {
+      cleanupNfcReader();
     }
   };
 
