@@ -342,31 +342,25 @@ const StudentRegistration = () => {
 
   const processNetlifyForm = async (formData) => {
     try {
-      console.log('Submitting to Netlify:', formData);
-      const data = {
-        'form-name': 'student-registration',
-        name: formData.name,
-        email: formData.email,
-        course: formData.course,
-        studentId: formData.studentId,
-        campus: formData.campus,
-        upass: formData.upass
-      };
+      // Encode form data properly for Netlify
+      const encodedForm = new URLSearchParams({
+        "form-name": "student-registration",
+        ...formData
+      }).toString();
   
-      const response = await fetch('/', {
-        method: 'POST',
+      const response = await fetch("/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded"
         },
-        body: new URLSearchParams(data).toString()
+        body: encodedForm
       });
   
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Form submission failed: ${response.status}`);
       }
-      console.log('Netlify submission successful');
     } catch (error) {
-      console.error('Netlify form submission error:', error);
+      console.error('Form submission error:', error);
       throw error;
     }
   };
@@ -376,6 +370,7 @@ const StudentRegistration = () => {
 
     try {
       await processNetlifyForm(formData);
+      updateStatus('Form submitted successfully', 'success');
 
       if (!('NDEFReader' in window)) {
         updateStatus('NFC is not supported on this device', 'warning');
@@ -406,38 +401,21 @@ const StudentRegistration = () => {
     <div className={styles.container}>
       <h1>Student Registration</h1>
 
-      {/* Hidden form */}
-      <form name="student-registration" netlify netlify-honeypot="bot-field" hidden>
-        <input type="hidden" name="form-name" value="student-registration" />
-        <input type="text" name="name" />
-        <input type="email" name="email" />
-        <input type="text" name="course" />
-        <input type="text" name="studentId" />
-        <input type="text" name="campus" />
-        <input type="text" name="upass" />
-      </form>
-
-      {/* Status Modal */}
-      {(!('NDEFReader' in window) || status) && (
-        <StatusModal 
-          message={!('NDEFReader' in window) ? 'NFC is not supported on this device' : status}
-          type={!('NDEFReader' in window) ? 'warning' : statusType}
-          isProcessing={isSaving}
-        />
-      )}
+    <form 
+      onSubmit={handleSubmit} 
+      className={styles.form}
+      name="student-registration"
+      method="POST"
+      data-netlify="true"
+      data-netlify-honeypot="bot-field"
+    >
+      {/* This hidden input is crucial */}
+      <input type="hidden" name="form-name" value="student-registration" />
       
-      {/* Your existing form with Netlify attributes added */}
-      <form 
-          name="student-registration"
-          method="POST"
-          netlify
-          netlify-honeypot="bot-field"
-        >
-        <input type="hidden" name="form-name" value="student-registration" />
-        {/* Honeypot field */}
-        <p hidden>
-          <label>Don't fill this out: <input name="bot-field" /></label>
-        </p>
+      {/* Honeypot field */}
+      <div hidden>
+        <input name="bot-field" />
+      </div>
 
         <input
           type="text"

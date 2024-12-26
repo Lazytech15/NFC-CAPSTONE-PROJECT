@@ -1,8 +1,7 @@
 [build]
-  publish = "dist"
-  command = "npm run build"
+  command = "npm run build"  # or your build command
+  publish = "build"  # or your build output directory
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[forms]
+  [forms."student-registration"]
+    name = "Student Registration"
