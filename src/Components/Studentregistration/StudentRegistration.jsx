@@ -67,19 +67,6 @@ const StatusModal = ({ message, type, isProcessing }) => {
 };
 
 const StudentRegistration = () => {
-  const navigate = useNavigate();
-  const [selfie, setSelfie] = useState(null);
-  const [uploadOption, setUploadOption] = useState('capture');
-  const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState('');
-  const [statusType, setStatusType] = useState('info');
-  const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
-  const [nfcReader, setNfcReader] = useState(null);
-  const [nfcController, setNfcController] = useState(null);
-  
-  const fileInputRef = useRef(null);
-  const existingImageInputRef = useRef(null);
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -89,29 +76,30 @@ const StudentRegistration = () => {
     upass: ''
   });
 
+  const [selfie, setSelfie] = useState(null);
+  const [uploadOption, setUploadOption] = useState('capture');
+  const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState('');
+  const [nfcReader, setNfcReader] = useState(null);
+  const [statusType, setStatusType] = useState('info');
+  const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const fileInputRef = useRef(null);
+  const existingImageInputRef = useRef(null);
+
   const updateStatus = (message, type = 'info') => {
     setStatus(message);
     setStatusType(type);
   };
 
   useEffect(() => {
-    // Cleanup function
     return () => {
-      cleanupNfcReader();
-    };
-  }, []);
-
-  const cleanupNfcReader = () => {
-    if (nfcController) {
-      try {
-        nfcController.abort();
-        setNfcController(null);
-        setNfcReader(null);
-      } catch (error) {
-        console.error('Error cleaning up NFC reader:', error);
+      if (nfcReader) {
+        nfcReader.abort();
       }
-    }
-  };
+    };
+  }, [nfcReader]);
 
   const handleSelfie = (e) => {
     const file = e.target.files[0];
@@ -155,24 +143,18 @@ const StudentRegistration = () => {
       throw new Error('NFC not supported on this device');
     }
 
-    // Cleanup any existing NFC reader
-    cleanupNfcReader();
-
     try {
-      updateStatus('Waiting for NFC tag...', 'info');
-      const controller = new AbortController();
+      setStatus('Waiting for NFC tag...');
       const ndef = new NDEFReader();
-      
-      setNfcController(controller);
       setNfcReader(ndef);
-
-      await ndef.scan({ signal: controller.signal });
+      await ndef.scan();
 
       const serialNumber = await new Promise((resolve, reject) => {
         const handleReading = async (event) => {
           try {
             const nfcSerialNumber = event.serialNumber;
             
+            // Check NFC authorization
             const isAuthorized = await checkNfcAuthorization(nfcSerialNumber);
             if (!isAuthorized) {
               reject(new Error('Unauthorized NFC tag'));
@@ -188,7 +170,6 @@ const StudentRegistration = () => {
 
         ndef.addEventListener("reading", handleReading);
 
-        // Set timeout for NFC reading
         setTimeout(() => {
           ndef.removeEventListener("reading", handleReading);
           reject(new Error('NFC tag read timeout'));
@@ -202,22 +183,30 @@ const StudentRegistration = () => {
       updateStatus(error.message, 'error');
       throw error;
     } finally {
-      cleanupNfcReader();
+      if (nfcReader) {
+        nfcReader.abort();
+        setNfcReader(null);
+      }
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      console.log('User signed out successfully');
-      
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
+const handleSignOut = async () => {
+  const auth = getAuth();
+  const navigate = useNavigate();
+
+  try {
+    await signOut(auth);
+    console.log('User signed out successfully');
+
+    
+    setTimeout(() => {
+      navigate('/login'); 
+    }, 2000);
+  } catch (error) {
+    console.error('Error signing out:', error);
+  }
+};
+
 
   const uploadSelfie = async () => {
     if (!selfie) return null;
@@ -342,40 +331,37 @@ const StudentRegistration = () => {
 
   const processNetlifyForm = async (formData) => {
     try {
-      const data = {
-        "form-name": "student-registration",
-        name: formData.name,
-        email: formData.email,
-        course: formData.course,
-        studentId: formData.studentId,
-        campus: formData.campus,
-        upass: formData.upass
-      };
-  
-      await fetch("/", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams(data).toString()
+      const netlifyFormData = new FormData();
+      netlifyFormData.append('form-name', 'student-registration');
+      
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        netlifyFormData.append(key, formData[key]);
       });
-  
-      console.log("Form submitted successfully");
+
+      // Send to Netlify's form handling endpoint
+      await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(netlifyFormData).toString()
+      });
     } catch (error) {
-      console.error("Form submission error:", error);
-      throw error;
+      console.error('Netlify form submission error:', error);
+      // Continue with rest of registration even if Netlify form fails
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!('NDEFReader' in window)) {
+      updateStatus('NFC is not supported on this device', 'warning');
+      return;
+    }
 
     try {
+      // Process Netlify form first
       await processNetlifyForm(formData);
-      updateStatus('Form submitted successfully', 'success');
-
-      if (!('NDEFReader' in window)) {
-        updateStatus('NFC is not supported on this device', 'warning');
-        return;
-      }
       
       updateStatus('Waiting for NFC tag... Please place your card', 'info');
       await scanNfcTag();
@@ -384,7 +370,6 @@ const StudentRegistration = () => {
       if (!window.confirm('Do you want to complete the registration?')) {
         setNfcSerialNumber(null);
         updateStatus('');
-        cleanupNfcReader();
         return;
       }
 
@@ -392,8 +377,6 @@ const StudentRegistration = () => {
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
-    } finally {
-      cleanupNfcReader();
     }
   };
 
@@ -401,20 +384,39 @@ const StudentRegistration = () => {
     <div className={styles.container}>
       <h1>Student Registration</h1>
 
+      {/* Hidden Netlify form */}
+      <form name="student-registration" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
+        <input type="hidden" name="form-name" value="student-registration" />
+        <input type="text" name="name" />
+        <input type="email" name="email" />
+        <input type="text" name="course" />
+        <input type="text" name="studentId" />
+        <input type="text" name="campus" />
+      </form>
+
+      {/* Status Modal */}
+      {(!('NDEFReader' in window) || status) && (
+        <StatusModal 
+          message={!('NDEFReader' in window) ? 'NFC is not supported on this device' : status}
+          type={!('NDEFReader' in window) ? 'warning' : statusType}
+          isProcessing={isSaving}
+        />
+      )}
+      
+      {/* Your existing form with Netlify attributes added */}
       <form 
         onSubmit={handleSubmit} 
         className={styles.form}
         name="student-registration"
         method="POST"
         data-netlify="true"
-        netlify-honeypot="bot-field"
+        data-netlify-honeypot="bot-field"
       >
         <input type="hidden" name="form-name" value="student-registration" />
-        
         {/* Honeypot field */}
-        <div hidden>
-          <input name="bot-field" />
-        </div>
+        <p hidden>
+          <label>Don't fill this out: <input name="bot-field" /></label>
+        </p>
 
         <input
           type="text"
