@@ -67,6 +67,23 @@ const StatusModal = ({ message, type, isProcessing }) => {
 };
 
 const StudentRegistration = () => {
+  const navigate = useNavigate();
+  const [selfie, setSelfie] = useState(null);
+  const [uploadOption, setUploadOption] = useState('capture');
+  const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState('');
+  const [statusType, setStatusType] = useState('info');
+  const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const fileInputRef = useRef(null);
+  const existingImageInputRef = useRef(null);
+
+  const [nfcReader, setNfcReader] = useState({
+    reader: null,
+    controller: null
+  });
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,18 +93,6 @@ const StudentRegistration = () => {
     upass: ''
   });
 
-  const [selfie, setSelfie] = useState(null);
-  const [uploadOption, setUploadOption] = useState('capture');
-  const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState('');
-  const [nfcReader, setNfcReader] = useState(null);
-  const [statusType, setStatusType] = useState('info');
-  const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const fileInputRef = useRef(null);
-  const existingImageInputRef = useRef(null);
-
   const updateStatus = (message, type = 'info') => {
     setStatus(message);
     setStatusType(type);
@@ -95,8 +100,8 @@ const StudentRegistration = () => {
 
   useEffect(() => {
     return () => {
-      if (nfcReader) {
-        nfcReader.abort();
+      if (nfcReader.controller) {
+        nfcReader.controller.abort();
       }
     };
   }, [nfcReader]);
@@ -145,16 +150,20 @@ const StudentRegistration = () => {
 
     try {
       setStatus('Waiting for NFC tag...');
+      const controller = new AbortController();
       const ndef = new NDEFReader();
-      setNfcReader(ndef);
-      await ndef.scan();
+      setNfcReader({
+        reader: ndef,
+        controller: controller
+      });
+
+      await ndef.scan({ signal: controller.signal });
 
       const serialNumber = await new Promise((resolve, reject) => {
         const handleReading = async (event) => {
           try {
             const nfcSerialNumber = event.serialNumber;
             
-            // Check NFC authorization
             const isAuthorized = await checkNfcAuthorization(nfcSerialNumber);
             if (!isAuthorized) {
               reject(new Error('Unauthorized NFC tag'));
@@ -183,30 +192,28 @@ const StudentRegistration = () => {
       updateStatus(error.message, 'error');
       throw error;
     } finally {
-      if (nfcReader) {
-        nfcReader.abort();
-        setNfcReader(null);
+      if (nfcReader.controller) {
+        nfcReader.controller.abort();
+        setNfcReader({
+          reader: null,
+          controller: null
+        });
       }
     }
   };
 
-const handleSignOut = async () => {
-  const auth = getAuth();
-  const navigate = useNavigate();
-
-  try {
-    await signOut(auth);
-    console.log('User signed out successfully');
-
-    
-    setTimeout(() => {
-      navigate('/login'); 
-    }, 2000);
-  } catch (error) {
-    console.error('Error signing out:', error);
-  }
-};
-
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      console.log('User signed out successfully');
+      
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const uploadSelfie = async () => {
     if (!selfie) return null;
