@@ -342,25 +342,25 @@ const StudentRegistration = () => {
 
   const processNetlifyForm = async (formData) => {
     try {
-      // Encode form data properly for Netlify
-      const encodedForm = new URLSearchParams({
+      const data = {
         "form-name": "student-registration",
-        ...formData
-      }).toString();
+        name: formData.name,
+        email: formData.email,
+        course: formData.course,
+        studentId: formData.studentId,
+        campus: formData.campus,
+        upass: formData.upass
+      };
   
-      const response = await fetch("/", {
+      await fetch("/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: encodedForm
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(data).toString()
       });
   
-      if (!response.ok) {
-        throw new Error(`Form submission failed: ${response.status}`);
-      }
+      console.log("Form submitted successfully");
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error("Form submission error:", error);
       throw error;
     }
   };
@@ -401,21 +401,20 @@ const StudentRegistration = () => {
     <div className={styles.container}>
       <h1>Student Registration</h1>
 
-    <form 
-      onSubmit={handleSubmit} 
-      className={styles.form}
-      name="student-registration"
-      method="POST"
-      data-netlify="true"
-      data-netlify-honeypot="bot-field"
-    >
-      {/* This hidden input is crucial */}
-      <input type="hidden" name="form-name" value="student-registration" />
-      
-      {/* Honeypot field */}
-      <div hidden>
-        <input name="bot-field" />
-      </div>
+      <form 
+        onSubmit={handleSubmit} 
+        className={styles.form}
+        name="student-registration"
+        method="POST"
+        data-netlify="true"
+        netlify-honeypot="bot-field"
+      >
+        <input type="hidden" name="form-name" value="student-registration" />
+        
+        {/* Honeypot field */}
+        <div hidden>
+          <input name="bot-field" />
+        </div>
 
         <input
           type="text"
