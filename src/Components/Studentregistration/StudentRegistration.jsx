@@ -67,15 +67,7 @@ const StatusModal = ({ message, type, isProcessing }) => {
 };
 
 const StudentRegistration = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    course: '',
-    campus: '',
-    studentId: '',
-    upass: ''
-  });
-
+  const navigate = useNavigate();
   const [selfie, setSelfie] = useState(null);
   const [uploadOption, setUploadOption] = useState('capture');
   const [isSaving, setIsSaving] = useState(false);
@@ -88,15 +80,37 @@ const StudentRegistration = () => {
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
 
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    course: '',
+    campus: '',
+    studentId: '',
+    upass: ''
+  });
+
   const updateStatus = (message, type = 'info') => {
     setStatus(message);
     setStatusType(type);
   };
 
   useEffect(() => {
+    let abortController;
+
+    const cleanupNFC = () => {
+      if (nfcReader && typeof nfcReader.abort === 'function') {
+        try {
+          nfcReader.abort();
+        } catch (error) {
+          console.warn('Error cleaning up NFC reader:', error);
+        }
+      }
+    };
+
     return () => {
-      if (nfcReader) {
-        nfcReader.abort();
+      cleanupNFC();
+      if (abortController) {
+        abortController.abort();
       }
     };
   }, [nfcReader]);
@@ -144,17 +158,27 @@ const StudentRegistration = () => {
     }
 
     try {
-      setStatus('Waiting for NFC tag...');
+      updateStatus('Waiting for NFC tag...', 'info');
       const ndef = new NDEFReader();
+      
+      // Create abort controller for timeout
+      const abortController = new AbortController();
+      const signal = abortController.signal;
+      
       setNfcReader(ndef);
-      await ndef.scan();
+      await ndef.scan({ signal });
 
-      const serialNumber = await new Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          abortController.abort();
+          reject(new Error('NFC tag read timeout'));
+        }, 30000);
+
         const handleReading = async (event) => {
           try {
             const nfcSerialNumber = event.serialNumber;
+            clearTimeout(timeoutId);
             
-            // Check NFC authorization
             const isAuthorized = await checkNfcAuthorization(nfcSerialNumber);
             if (!isAuthorized) {
               reject(new Error('Unauthorized NFC tag'));
@@ -164,49 +188,34 @@ const StudentRegistration = () => {
             ndef.removeEventListener("reading", handleReading);
             resolve(nfcSerialNumber);
           } catch (error) {
+            clearTimeout(timeoutId);
             reject(error);
           }
         };
 
         ndef.addEventListener("reading", handleReading);
 
-        setTimeout(() => {
+        signal.addEventListener('abort', () => {
           ndef.removeEventListener("reading", handleReading);
-          reject(new Error('NFC tag read timeout'));
-        }, 30000);
+          reject(new Error('NFC scan aborted'));
+        });
       });
-
-      setNfcSerialNumber(serialNumber);
-      updateStatus('NFC tag detected successfully', 'success');
-      return serialNumber;
     } catch (error) {
       updateStatus(error.message, 'error');
       throw error;
-    } finally {
-      if (nfcReader) {
-        nfcReader.abort();
-        setNfcReader(null);
-      }
     }
   };
 
-const handleSignOut = async () => {
-  const auth = getAuth();
-  const navigate = useNavigate();
-
-  try {
-    await signOut(auth);
-    console.log('User signed out successfully');
-
-    
-    setTimeout(() => {
-      navigate('/login'); 
-    }, 2000);
-  } catch (error) {
-    console.error('Error signing out:', error);
-  }
-};
-
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      console.log('User signed out successfully');
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      updateStatus('Error signing out: ' + error.message, 'error');
+    }
+  };
 
   const uploadSelfie = async () => {
     if (!selfie) return null;
