@@ -350,8 +350,6 @@ const Login = () => {
     return async () => {
       if (nfcReaderInstance) {
         try {
-          // Abort the NFC scan
-          nfcReaderInstance.abort();
           // Remove all listeners
           nfcReaderInstance.removeAllListeners?.();
           setNfcReader(null);
