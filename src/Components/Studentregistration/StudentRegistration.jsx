@@ -342,36 +342,45 @@ const StudentRegistration = () => {
 
   const processNetlifyForm = async (formData) => {
     try {
-      const netlifyFormData = new FormData();
-      netlifyFormData.append('form-name', 'student-registration');
-      
-      // Add all form fields
-      Object.keys(formData).forEach(key => {
-        netlifyFormData.append(key, formData[key]);
-      });
-
-      // Send to Netlify's form handling endpoint
-      await fetch('/', {
+      console.log('Submitting to Netlify:', formData);
+      const data = {
+        'form-name': 'student-registration',
+        name: formData.name,
+        email: formData.email,
+        course: formData.course,
+        studentId: formData.studentId,
+        campus: formData.campus,
+        upass: formData.upass
+      };
+  
+      const response = await fetch('/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(netlifyFormData).toString()
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(data).toString()
       });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      console.log('Netlify submission successful');
     } catch (error) {
       console.error('Netlify form submission error:', error);
-      // Continue with rest of registration even if Netlify form fails
+      throw error;
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!('NDEFReader' in window)) {
-      updateStatus('NFC is not supported on this device', 'warning');
-      return;
-    }
 
     try {
       await processNetlifyForm(formData);
+
+      if (!('NDEFReader' in window)) {
+        updateStatus('NFC is not supported on this device', 'warning');
+        return;
+      }
       
       updateStatus('Waiting for NFC tag... Please place your card', 'info');
       await scanNfcTag();
@@ -397,14 +406,15 @@ const StudentRegistration = () => {
     <div className={styles.container}>
       <h1>Student Registration</h1>
 
-      {/* Hidden Netlify form */}
-      <form name="student-registration" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
+      {/* Hidden form */}
+      <form name="student-registration" netlify netlify-honeypot="bot-field" hidden>
         <input type="hidden" name="form-name" value="student-registration" />
         <input type="text" name="name" />
         <input type="email" name="email" />
         <input type="text" name="course" />
         <input type="text" name="studentId" />
         <input type="text" name="campus" />
+        <input type="text" name="upass" />
       </form>
 
       {/* Status Modal */}
@@ -418,13 +428,11 @@ const StudentRegistration = () => {
       
       {/* Your existing form with Netlify attributes added */}
       <form 
-        onSubmit={handleSubmit} 
-        className={styles.form}
-        name="student-registration"
-        method="POST"
-        data-netlify="true"
-        data-netlify-honeypot="bot-field"
-      >
+          name="student-registration"
+          method="POST"
+          netlify
+          netlify-honeypot="bot-field"
+        >
         <input type="hidden" name="form-name" value="student-registration" />
         {/* Honeypot field */}
         <p hidden>
