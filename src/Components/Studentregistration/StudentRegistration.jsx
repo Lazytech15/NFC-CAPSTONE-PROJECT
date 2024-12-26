@@ -74,7 +74,6 @@ const StudentRegistration = () => {
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState('info');
   const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
