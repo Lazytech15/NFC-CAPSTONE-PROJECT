@@ -1,4 +1,7 @@
 /* CreateEvent.module.css */
+* {
+    box-sizing: border-box;
+}
 
 .container {
   max-width: 1200px;
@@ -99,11 +102,13 @@
   gap: 20px;
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
+
 
 @media (min-width: 768px) {
   .formGrid {
@@ -309,5 +314,8 @@
   }
   .status{
     width: 70%;
+  }
+  .formGrid {
+    grid-template-columns: 1fr;
   }
 }
