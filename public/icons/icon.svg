@@ -1,27 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
   <!-- Background -->
-  <rect width="512" height="512" fill="#2563eb"/>
+  <rect width="400" height="400" fill="#f8f9fa"/>
   
-  <!-- NFC text -->
-  <text 
-    x="256" 
-    y="256" 
-    font-family="Arial, sans-serif" 
-    font-size="140" 
-    font-weight="bold" 
-    fill="white" 
-    text-anchor="middle" 
-    dominant-baseline="middle">
-    NFC
+  <!-- NFC Scanner Base -->
+  <rect x="100" y="100" width="200" height="240" rx="20" fill="#6c63ff"/>
+  <rect x="110" y="110" width="180" height="220" rx="15" fill="#8480ff"/>
+  
+  <!-- Scanner Screen -->
+  <rect x="130" y="130" width="140" height="100" rx="10" fill="#2d3436"/>
+  
+  <!-- NFC Waves Animation -->
+  <path d="M160 180 Q200 140 240 180" fill="none" stroke="#00ff88" stroke-width="4">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/>
+  </path>
+  <path d="M170 190 Q200 160 230 190" fill="none" stroke="#00ff88" stroke-width="4">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- NFC Card -->
+  <rect x="150" y="250" width="100" height="60" rx="5" fill="#ffffff" stroke="#e0e0e0" stroke-width="2"/>
+  <rect x="170" y="260" width="60" height="10" rx="2" fill="#e0e0e0"/>
+  <circle cx="190" cy="280" r="15" fill="none" stroke="#6c63ff" stroke-width="2"/>
+  
+  <!-- Data Transfer Icons -->
+  <circle cx="200" cy="200" r="5" fill="#00ff88">
+    <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Decorative Elements -->
+  <circle cx="200" cy="350" r="8" fill="#6c63ff"/>
+  <rect x="190" y="90" width="20" height="4" rx="2" fill="#6c63ff"/>
+  
+  <!-- Cool Pattern -->
+  <path d="M270 140 L290 140 L290 160" fill="none" stroke="#00ff88" stroke-width="2"/>
+  <path d="M130 260 L110 260 L110 240" fill="none" stroke="#00ff88" stroke-width="2"/>
+  
+  <!-- N•G•P Text -->
+  <text x="200" y="70" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#2d3436">
+    N•G•P
   </text>
-  
-  <!-- Border -->
-  <rect 
-    x="25" 
-    y="25" 
-    width="462" 
-    height="462" 
-    fill="none" 
-    stroke="white" 
-    stroke-width="20"/>
 </svg>
