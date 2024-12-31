@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg'],
       manifest: {
-        name: 'TapTrack Pro',
-        short_name: 'TapTrack',
+        name: 'Next Generation Permission',
+        short_name: 'next-gen-permss',
         description: 'Streamline Attendance and Event Management with Real-Time Alerts',
         theme_color: '#010066',
         background_color: '#010066',
