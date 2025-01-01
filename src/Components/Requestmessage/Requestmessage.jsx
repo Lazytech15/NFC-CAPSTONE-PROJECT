@@ -377,11 +377,11 @@ const handleSubmit = async (e) => {
         }
       }
 
-      // Send notification if recipient has FCM token
-      if (recipientData?.fcmToken) {
+      if (recipientData?.fcmTokens && recipientData.fcmTokens.length > 0) {
+        const latestToken = recipientData.fcmTokens[0].token; 
         const sendNotification = httpsCallable(functions, 'sendNotification');
         await sendNotification({
-          token: recipientData.fcmToken,
+          token: latestToken,
           title: `New message from ${currentUser.email}`,
           body: formData.subject,
           data: {
