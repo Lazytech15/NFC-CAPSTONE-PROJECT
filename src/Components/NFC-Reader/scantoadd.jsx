@@ -201,7 +201,7 @@ const NFCReaderAttendance = () => {
     };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.attendance_container}>
       <div className={styles.eventsContainer}>
         <h2>Available Events</h2>
         {events.map(event => (

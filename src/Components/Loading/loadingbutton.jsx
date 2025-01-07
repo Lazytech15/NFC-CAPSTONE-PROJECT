@@ -1,12 +1,10 @@
 import React from 'react';
-import styles from './Loading.module.css';
+import styles from './loadingbutton.module.css';
 
-const Loading = ({ size = 'default', text = 'Loading...' }) => {
-  const containerClass = `${styles.loading_container} ${size !== 'default' ? styles[size] : ''}`;
-  
+const ButtonLoader = () => {
   return (
-    <div className={containerClass}>
-      <div className={styles.hand_container}>
+    <span className={styles.button_loader}>
+      <span className={styles.hand_container}>
         <div className={`${styles.finger} ${styles.finger1}`}>
           <div className={styles.finger_item}>
             <span></span><i></i>
@@ -30,10 +28,9 @@ const Loading = ({ size = 'default', text = 'Loading...' }) => {
         <div className={styles.last_finger}>
           <div className={styles.last_finger_item}><i></i></div>
         </div>
-      </div>
-      <p className={styles.loading_text}>{text}</p>
-    </div>
+      </span>
+    </span>
   );
 };
 
-export default Loading;
+export default ButtonLoader;

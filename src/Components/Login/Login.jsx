@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
+import Slider from 'react-slick'; 
+import "slick-carousel/slick/slick.css"; 
+import "slick-carousel/slick/slick-theme.css";
+import Swal from 'sweetalert2'
 
 import { initializeApp } from "firebase/app";
 import { 
@@ -171,7 +175,11 @@ const Login = () => {
         setStatusMessage('');
         setStatusDetails([]);
       }, 1000);
-      setError("Access Denied, Please check you email and password");
+      Swal.fire({
+        title: "Access Denied!",
+        text: "Please check you email and password",
+        icon: "error"
+      });
     } finally {
       setLoading(false);
     }
@@ -211,8 +219,11 @@ const Login = () => {
         setStatusMessage('');
         setStatusDetails([]);
       }, 1000);
-      setError(err.message);
-      
+      Swal.fire({
+        title: "Access Denied!",
+        text: "Please check youre email",
+        icon: "error"
+      });
     } finally {
       // setLoading(false);
     }
@@ -298,8 +309,11 @@ const Login = () => {
                   setStatusMessage('');
                   setStatusDetails([]);
                 }, 1000);
-                console.error('Authentication error:', authError);
-                setError('Failed to authenticate with NFC card.');
+                Swal.fire({
+                  title: "Access Denied!",
+                  text: "Please check you NFC card if it is registered",
+                  icon: "error"
+                });
               }
             } catch (err) {
               console.error('Error processing NFC card:', err);
@@ -436,93 +450,117 @@ const Login = () => {
     }
   };
 
+  const settings = { 
+    dots: false, 
+    infinite: true, 
+    speed: 500, 
+    slidesToShow: 1, 
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 5000,
+    arrows: false
+  };
+
   return (
     <div className={styles.login_container}>
-
-    {/* Status Display */}
-    {(statusMessage || loading) && ( 
-      <div className={`${styles.status} ${isReading ? styles.reading : ''}`}> 
-        <div className={styles.status_command}>
-          {statusMessage}
-        </div> 
-        {statusDetails.map((detail, index) => ( 
-          <div 
-            key={index} 
-            className={`${styles.status_detail} ${detail.includes('failed') ? 'error' : ''}`}
-          >
-            {detail}
-          </div> 
-        ))} 
-      </div> 
-    )}
-
-
-
-      <div className={styles.login_card}>
-        <h1 className={styles.login_title}>Login</h1>
-        
-        {/* {nfcSupported && (
-          <div className={styles.nfc_status}>
-            <p>NFC is enabled. Tap your card to login.</p>
-          </div>
-        )} */}
-        
-        <form onSubmit={handleEmailLogin} className={styles.login_form}>
-          <div className={styles.form_group}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className={styles.login_input}
-            />
-          </div>
-          
-          <div className={styles.form_group}>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className={styles.login_input}
-            />
-          </div>
-          
-          {error && (
-            <div className={styles.error_message}>
-              {error}
-            </div>
-          )}
-          
-          <button 
-            type="submit" 
-            className={styles.login_button}
-            disabled={loading}
-          >
-            {loading ? "Please wait.." : 'Login'}
-          </button>
-        </form>
-        
-        <div className={styles.divider}>
-          <span>Or continue with</span>
+    <Slider {...settings} className={styles.carousel}> 
+        <div> 
+          <img src="/images/image01.jpg" alt="Login" /> 
         </div>
+        <div>
+          <img src="/images/image02.jpg" alt="Login" /> 
+        </div>
+        <div>
+          <img src="/images/image03.jpg" alt="Login" /> 
+        </div>
+    </Slider>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className={styles.google_button}
-        >
-          <svg className={styles.google_icon} viewBox="0 0 24 24">
-            <path
-              fill="currentColor"
-              d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
-            />
-          </svg>
-          Sign in with Google
-        </button>
+    <div className={styles.login_form_container}>
+  {/* Status Display */}
+  {(statusMessage || loading) && ( 
+        <div className={`${styles.status} ${isReading ? styles.reading : ''}`}> 
+          <div className={styles.status_command}>
+            {statusMessage}
+          </div> 
+          {statusDetails.map((detail, index) => ( 
+            <div 
+              key={index} 
+              className={`${styles.status_detail} ${detail.includes('failed') ? 'error' : ''}`}
+            >
+              {detail}
+            </div> 
+          ))} 
+        </div> 
+      )}
+
+
+
+        <div className={styles.login_card}>
+          <h1 className={styles.login_title}>Login</h1>
+          
+          {/* {nfcSupported && (
+            <div className={styles.nfc_status}>
+              <p>NFC is enabled. Tap your card to login.</p>
+            </div>
+          )} */}
+          
+          <form onSubmit={handleEmailLogin} className={styles.login_form}>
+            <div className={styles.form_group}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className={styles.login_input}
+              />
+            </div>
+            
+            <div className={styles.form_group}>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={styles.login_input}
+              />
+            </div>
+            
+            {error && (
+              <div className={styles.error_message}>
+                {error}
+              </div>
+            )}
+            
+            <button 
+              type="submit" 
+              className={styles.login_button}
+              disabled={loading}
+            >
+              {loading ? "Please wait.." : 'Login'}
+            </button>
+          </form>
+          
+          <div className={styles.divider}>
+            <span>Or continue with</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className={styles.google_button}
+          >
+            <svg className={styles.google_icon} viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
+              />
+            </svg>
+            Sign in with Google
+          </button>
+        </div>
       </div>
     </div>
   );

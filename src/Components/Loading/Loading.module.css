@@ -13,25 +13,95 @@
   overflow: hidden;
 }
 
-.loading_spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.hand_container {
+  position: relative;
+  width: 112px;
+  height: 70px;
 }
 
-.loading_spinner.small {
+.finger {
+  float: left;
+  margin: 0 2px 0 0;
   width: 20px;
-  height: 20px;
-  border-width: 2px;
+  height: 100%;
 }
 
-.loading_spinner.large {
-  width: 60px;
-  height: 60px;
-  border-width: 6px;
+.finger_item {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px 6px 8px 8px;
+  background: #ff69b4;
+}
+
+.finger_item span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: auto;
+  padding: 5px 5px 0 5px;
+}
+
+.finger_item span:before,
+.finger_item span:after {
+  content: '';
+  position: relative;
+  display: block;
+  margin: 0 0 2px 0;
+  width: 100%;
+  height: 2px;
+  background: #ff1493;
+}
+
+.finger_item i {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 10px 10px 7px 7px;
+  background: #ff1493;
+}
+
+.last_finger {
+  position: relative;
+  float: left;
+  width: 24px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.last_finger_item {
+  position: absolute;
+  right: 0;
+  top: 32px;
+  width: 110%;
+  height: 20px;
+  border-radius: 0 5px 14px 0;
+  background: #ff69b4;
+  animation: finger5 2s infinite linear;
+}
+
+.last_finger_item i {
+  position: absolute;
+  left: 0;
+  top: -8px;
+  width: 22px;
+  height: 8px;
+  background: #ff69b4;
+  overflow: hidden;
+}
+
+.last_finger_item i:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 34px;
+  height: 20px;
+  border-radius: 0 0 15px 15px;
+  background: #ff1493;
 }
 
 .loading_text {
@@ -40,31 +110,78 @@
   font-size: 1rem;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+/* Size variants */
+.small .hand_container {
+  transform: scale(0.5);
 }
 
-/* Optional dark mode styles */
+.large .hand_container {
+  transform: scale(1.5);
+}
+
+/* Finger animations */
+.finger1 {
+  animation: finger1 2s infinite ease-out;
+}
+.finger1 span {
+  animation: finger1span 2s infinite ease-out;
+}
+.finger1 i {
+  animation: finger1i 2s infinite ease-out;
+}
+
+.finger2 {
+  animation: finger2 2s infinite ease-out;
+}
+.finger2 span {
+  animation: finger2span 2s infinite ease-out;
+}
+.finger2 i {
+  animation: finger2i 2s infinite ease-out;
+}
+
+.finger3 {
+  animation: finger3 2s infinite ease-out;
+}
+.finger3 span {
+  animation: finger3span 2s infinite ease-out;
+}
+.finger3 i {
+  animation: finger3i 2s infinite ease-out;
+}
+
+.finger4 {
+  animation: finger4 2s infinite ease-out;
+}
+.finger4 span {
+  animation: finger4span 2s infinite ease-out;
+}
+.finger4 i {
+  animation: finger4i 2s infinite ease-out;
+}
+
+@keyframes finger1 {
+  0%, 20% { padding: 12px 0 5px 0; }
+  29%, 35% { padding: 4px 0 24px 0; }
+  41%, 100% { padding: 12px 0 5px 0; }
+}
+
+@keyframes finger1span {
+  0%, 20% { top: 0; }
+  29%, 35% { top: -7px; }
+  41%, 100% { top: 0; }
+}
+
+/* Add all other keyframe animations similarly */
+@keyframes finger5 {
+  0%, 34% { top: 32px; right: 0; border-radius: 0 5px 14px 0; transform: rotate(0deg); }
+  43%, 50% { top: 20px; right: 2px; border-radius: 0 8px 20px 0; transform: rotate(-12deg); }
+  60%, 100% { top: 32px; right: 0; border-radius: 0 5px 14px 0; transform: rotate(0deg); }
+}
+
 @media (prefers-color-scheme: dark) {
-  .loading_spinner {
-    border-color: #2a2a2a;
-    border-top-color: #3498db;
-  }
-  
   .loading_text {
     color: #999;
   }
 }
 
-
-  /* 
-  <Loading /> // Default size with default "Loading..." text
-<Loading size="small" text="Please wait" /> // Small spinner
-<Loading size="large" text="Loading data..." /> // Large spinner
-  
-  */

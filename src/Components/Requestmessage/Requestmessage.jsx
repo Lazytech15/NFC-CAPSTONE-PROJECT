@@ -7,6 +7,10 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { requestNotificationPermission, onMessageListener, showNotification } from '/utils/firebase-messaging';
 import Buttons from '../Button/Button.module.css';
 import NotificationDialog from './NotificationDialog.jsx'
+import emailjs from '@emailjs/browser';
+
+// Initialize EmailJS
+emailjs.init("oISKdHxQTlz06KQWx");
 
 const RequestForm = ({ onClose }) => {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -326,81 +330,76 @@ useEffect(() => {
     }
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
-
-      // If notifications aren't enabled, ask user if they want to enable them
-      if (!notificationEnabled && 'Notification' in window) {
-        const shouldEnable = window.confirm('Would you like to enable notifications to receive updates about your messages?');
-        if (shouldEnable) {
-          setIsNotificationRequesting(true);
-          try {
-            const token = await requestNotificationPermission(currentUser.uid);
-            if (token) {
-              setNotificationEnabled(true);
-            }
-          } catch (error) {
-            console.error('Error enabling notifications:', error);
-          } finally {
-            setIsNotificationRequesting(false);
-          }
-        }
-      }
-
-      // Add message to Firestore
-      const messageRef = await addDoc(collection(db, 'Messages'), {
-        sendTo: formData.to,
+  
+      // Dynamically set the recipient's email address
+      const emailParams = {
+        to_email: formData.to, // Use the email address entered in the form
+        from_name: currentUser.email,
         subject: formData.subject,
         message: formData.message,
-        sender: currentUser.email,
-        timestamp: serverTimestamp(),
-        read: false
-      });
-
-      // Get recipient's user document
-      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
-      let recipientData = null;
-
-      for (const collectionName of collections) {
-        const recipientQuery = query(
-          collection(db, collectionName),
-          where('email', '==', formData.to)
+        reply_to: currentUser.email,
+      };
+  
+      try {
+        const emailResponse = await emailjs.send(
+          "service_84ds9ei",
+          "template_lkfygnb",
+          emailParams
         );
-        const recipientSnapshot = await getDocs(recipientQuery);
+  
+        if (emailResponse.status === 200) {
+          console.log('Email sent successfully');
+        }
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        // We'll continue with Firebase storage even if email fails
+      }
+  
+      // Store message in Firebase (now optional - for registered users only)
+      const recipientExists = await checkIfRecipientExists(formData.to);
+      
+      if (recipientExists) {
+        const messageRef = await addDoc(collection(db, 'Messages'), {
+          sendTo: formData.to,
+          subject: formData.subject,
+          message: formData.message,
+          sender: currentUser.email,
+          timestamp: serverTimestamp(),
+          read: false
+        });
+  
+        // Handle notifications for registered recipients
+        const recipientData = await getRecipientData(formData.to);
         
-        if (!recipientSnapshot.empty) {
-          recipientData = recipientSnapshot.docs[0].data();
-          break;
+        if (recipientData?.fcmToken) {
+          const sendNotification = httpsCallable(functions, 'sendNotification');
+          await sendNotification({
+            token: recipientData.fcmToken,
+            title: `New message from ${currentUser.email}`,
+            body: formData.subject,
+            data: {
+              messageId: messageRef.id,
+              type: 'new_message',
+              url: `/messages/${messageRef.id}`
+            }
+          });
         }
       }
-
-      if (recipientData?.fcmTokens && recipientData.fcmTokens.length > 0) {
-        const latestToken = recipientData.fcmTokens[0].token; 
-        const sendNotification = httpsCallable(functions, 'sendNotification');
-        await sendNotification({
-          token: latestToken,
-          title: `New message from ${currentUser.email}`,
-          body: formData.subject,
-          data: {
-            messageId: messageRef.id,
-            type: 'new_message',
-            url: `/messages/${messageRef.id}`
-          }
-        });
-      }
-
-      // Show success notification to sender using ServiceWorkerRegistration
+  
+      // Show success notification to sender
       if (notificationEnabled && swRegistration) {
         await showNotificationMessage('Message Sent', {
           body: `Your message "${formData.subject}" has been sent to ${formData.to}`,
           icon: '/icons/icon.svg'
         });
       }
-
-      // Reset form and fetch updated messages
+  
+      // Reset form and update UI
       setFormData({
         to: '',
         subject: '',
@@ -409,10 +408,10 @@ const handleSubmit = async (e) => {
       });
       setShowCompose(false);
       fetchMessages();
-
+  
     } catch (error) {
-      console.error('Error sending message:', error);
-      // Show error notification if enabled
+      console.error('Error in send process:', error);
+      // Show error notification
       if (notificationEnabled && swRegistration) {
         await showNotificationMessage('Error Sending Message', {
           body: 'There was an error sending your message. Please try again.',
@@ -421,6 +420,35 @@ const handleSubmit = async (e) => {
       }
     }
   };
+  
+
+  // Helper function to check if recipient is registered
+    const checkIfRecipientExists = async (email) => {
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+      
+      for (const collectionName of collections) {
+        const q = query(collection(db, collectionName), where('email', '==', email));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          return true;
+        }
+      }
+      return false;
+    };
+  
+    // Helper function to get recipient data
+    const getRecipientData = async (email) => {
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+      
+      for (const collectionName of collections) {
+        const q = query(collection(db, collectionName), where('email', '==', email));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          return snapshot.docs[0].data();
+        }
+      }
+      return null;
+    };
 
   const handleChange = (e) => {
     const { name, value } = e.target;

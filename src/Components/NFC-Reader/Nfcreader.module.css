@@ -1,5 +1,4 @@
-.container {
-    max-width: 600px;
+.container, .attendance_container {
     margin: 2rem auto;
     padding: 1.5rem;
     background-color: #ffffff;
@@ -135,11 +134,6 @@
   }
 
   /* sneakingAttendance */
-  .Sneakadd {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
   
   .eventsContainer {
     margin-bottom: 2rem;

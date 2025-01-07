@@ -5,6 +5,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import styles from './CreateEvent.module.css';
 import Buttons from '../Button/Button.module.css';
 import { ImagePlus } from 'lucide-react';
+import Loading from '../Loading/Loading.jsx';
+import Swal from 'sweetalert2'
 
 
 const CreateEvent = () => {
@@ -91,6 +93,11 @@ const CreateEvent = () => {
 
       const docRef = await addDoc(collection(db, "PendingEvent"), eventData);
       resetForm();
+      Swal.fire({
+        title: "Event Created!",
+        text: "Please wait for the admin to approve your event.",
+        icon: "success"
+      });
     } catch (error) {
       console.error("Error creating event: ", error);
       alert("Error creating event. Please try again.");
@@ -291,7 +298,11 @@ const CreateEvent = () => {
           </div>
           
           <button type="submit" className={Buttons.buttons} disabled={loading} name="Create Event Submit">
-            {loading ? "Please wait.." : 'Create Event'}
+            {loading ? (
+              <Loading text="Please wait..." size="large" />
+            ) : (
+              'Create Event'
+            )}
           </button>
         </form>
       </div>
