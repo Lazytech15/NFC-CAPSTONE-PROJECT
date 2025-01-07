@@ -288,6 +288,10 @@
 }
 
 @media (max-width: 600px) {
+  .cardHeader{
+    padding-bottom: 0px;
+    margin-bottom: 10px;
+  }
   .card{
     margin-top: 30px;
   }
