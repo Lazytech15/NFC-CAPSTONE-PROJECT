@@ -11,3 +11,6 @@
 [forms]
   [forms."student-registration"]
     name = "Student Registration"
+
+[functions]
+  directory = "netlify/functions"

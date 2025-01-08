@@ -333,93 +333,88 @@ useEffect(() => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-  
-      // Dynamically set the recipient's email address
-      const emailParams = {
-        to_email: formData.to, // Use the email address entered in the form
-        from_name: currentUser.email,
-        subject: formData.subject,
-        message: formData.message,
-        reply_to: currentUser.email,
-      };
-  
-      try {
-        const emailResponse = await emailjs.send(
-          "service_84ds9ei",
-          "template_lkfygnb",
-          emailParams
-        );
-  
-        if (emailResponse.status === 200) {
-          console.log('Email sent successfully');
-        }
-      } catch (emailError) {
-        console.error('Error sending email:', emailError);
-        // We'll continue with Firebase storage even if email fails
-      }
-  
-      // Store message in Firebase (now optional - for registered users only)
-      const recipientExists = await checkIfRecipientExists(formData.to);
-      
-      if (recipientExists) {
-        const messageRef = await addDoc(collection(db, 'Messages'), {
-          sendTo: formData.to,
-          subject: formData.subject,
-          message: formData.message,
-          sender: currentUser.email,
-          timestamp: serverTimestamp(),
-          read: false
-        });
-  
-        // Handle notifications for registered recipients
-        const recipientData = await getRecipientData(formData.to);
-        
-        if (recipientData?.fcmToken) {
-          const sendNotification = httpsCallable(functions, 'sendNotification');
-          await sendNotification({
-            token: recipientData.fcmToken,
-            title: `New message from ${currentUser.email}`,
-            body: formData.subject,
-            data: {
-              messageId: messageRef.id,
-              type: 'new_message',
-              url: `/messages/${messageRef.id}`
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        // Dynamically set the recipient's email address
+        const emailParams = {
+            to: formData.to, // Use the email address entered in the form
+            subject: formData.subject,
+            text: formData.message // Use 'text' instead of 'message'
+        };
+
+        try {
+            const emailResponse = await sendEmail(emailParams.to, emailParams.subject, emailParams.text);
+
+            if (emailResponse.status === 200) {
+                console.log('Email sent successfully');
             }
-          });
+        } catch (emailError) {
+            console.error('Error sending email:', emailError);
+            // We'll continue with Firebase storage even if email fails
         }
-      }
-  
-      // Show success notification to sender
-      if (notificationEnabled && swRegistration) {
-        await showNotificationMessage('Message Sent', {
-          body: `Your message "${formData.subject}" has been sent to ${formData.to}`,
-          icon: '/icons/icon.svg'
+
+        // Store message in Firebase (now optional - for registered users only)
+        const recipientExists = await checkIfRecipientExists(formData.to);
+
+        if (recipientExists) {
+            const messageRef = await addDoc(collection(db, 'Messages'), {
+                sendTo: formData.to,
+                subject: formData.subject,
+                message: formData.message,
+                sender: currentUser.email,
+                timestamp: serverTimestamp(),
+                read: false
+            });
+
+            // Handle notifications for registered recipients
+            const recipientData = await getRecipientData(formData.to);
+
+            if (recipientData?.fcmToken) {
+                const sendNotification = httpsCallable(functions, 'sendNotification');
+                await sendNotification({
+                    token: recipientData.fcmToken,
+                    title: `New message from ${currentUser.email}`,
+                    body: formData.subject,
+                    data: {
+                        messageId: messageRef.id,
+                        type: 'new_message',
+                        url: `/messages/${messageRef.id}`
+                    }
+                });
+            }
+        }
+
+        // Show success notification to sender
+        if (notificationEnabled && swRegistration) {
+            await showNotificationMessage('Message Sent', {
+                body: `Your message "${formData.subject}" has been sent to ${formData.to}`,
+                icon: '/icons/icon.svg'
+            });
+        }
+
+        // Reset form and update UI
+        setFormData({
+            to: '',
+            subject: '',
+            message: '',
+            attachment: null
         });
-      }
-  
-      // Reset form and update UI
-      setFormData({
-        to: '',
-        subject: '',
-        message: '',
-        attachment: null
-      });
-      setShowCompose(false);
-      fetchMessages();
-  
+        setShowCompose(false);
+        fetchMessages();
+
     } catch (error) {
-      console.error('Error in send process:', error);
-      // Show error notification
-      if (notificationEnabled && swRegistration) {
-        await showNotificationMessage('Error Sending Message', {
-          body: 'There was an error sending your message. Please try again.',
-          icon: '/icons/icon.svg'
-        });
-      }
+        console.error('Error in send process:', error);
+        // Show error notification
+        if (notificationEnabled && swRegistration) {
+            await showNotificationMessage('Error Sending Message', {
+                body: 'There was an error sending your message. Please try again.',
+                icon: '/icons/icon.svg'
+            });
+        }
     }
-  };
+};
+
   
 
   // Helper function to check if recipient is registered
