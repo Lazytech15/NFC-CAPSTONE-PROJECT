@@ -362,6 +362,15 @@
   --sidebar-top-offset: 40px;
 }
 
+/* 1400px and height 800px */
+@media (max-width: 1400px) and (max-height: 800px) {
+  .navLink{
+    padding: 0.2rem;
+    gap:1rem;
+  }
+
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .welcomeContainer {
