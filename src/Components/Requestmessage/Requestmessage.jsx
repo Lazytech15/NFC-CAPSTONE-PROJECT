@@ -330,22 +330,32 @@ useEffect(() => {
     }
   };
 
-  async function sendEmail(to, subject, text) {
-    const response = await fetch('https://next-gen-permss.netlify.app/.netlify/functions/sendEmail', {
+  const sendEmail = async (emailData) => {
+    try {
+      const response = await fetch('/.netlify/functions/sendEmail', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ to, subject, text })
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to send email');
+        body: JSON.stringify({
+          to: emailData.to,
+          subject: emailData.subject,
+          text: emailData.message
+        })
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+  
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data;
-}
+  };
 
 
   const handleSubmit = async (e) => {
@@ -354,23 +364,12 @@ useEffect(() => {
         const currentUser = auth.currentUser;
         if (!currentUser) return;
 
-        // Dynamically set the recipient's email address
-        const emailParams = {
-            to: formData.to, // Use the email address entered in the form
-            subject: formData.subject,
-            text: formData.message // Use 'text' instead of 'message'
-        };
-
-        try {
-            const emailResponse = await sendEmail(emailParams.to, emailParams.subject, emailParams.text);
-
-            if (emailResponse.status === 200) {
-                console.log('Email sent successfully');
-            }
-        } catch (emailError) {
-            console.error('Error sending email:', emailError);
-            // We'll continue with Firebase storage even if email fails
-        }
+    // Send email
+    await sendEmail({
+      to: formData.to,
+      subject: formData.subject,
+      message: formData.message
+    });
 
         // Store message in Firebase (now optional - for registered users only)
         const recipientExists = await checkIfRecipientExists(formData.to);
