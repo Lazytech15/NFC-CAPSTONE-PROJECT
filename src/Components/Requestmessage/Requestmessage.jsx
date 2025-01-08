@@ -8,6 +8,7 @@ import { requestNotificationPermission, onMessageListener, showNotification } fr
 import Buttons from '../Button/Button.module.css';
 import NotificationDialog from './NotificationDialog.jsx'
 import emailjs from '@emailjs/browser';
+import Swal from 'sweetalert2'
 
 // Initialize EmailJS
 emailjs.init("oISKdHxQTlz06KQWx");
@@ -368,7 +369,7 @@ useEffect(() => {
     await sendEmail({
       to: formData.to,
       subject: formData.subject,
-      message: formData.message
+      message: "You have a new message from " + currentUser.email
     });
 
         // Store message in Firebase (now optional - for registered users only)
@@ -419,6 +420,12 @@ useEffect(() => {
         });
         setShowCompose(false);
         fetchMessages();
+
+      Swal.fire({
+        title: "Message Sent!",
+        text: "Message has been sent successfully!",
+        icon: "success"
+      });
 
     } catch (error) {
         console.error('Error in send process:', error);

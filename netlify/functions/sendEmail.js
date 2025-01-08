@@ -30,8 +30,8 @@ export async function handler(event, context) {
             port: 587,
             secure: false, // Use TLS
             auth: {
-                user: 'renatoablao24@gmail.com',
-                pass: 'hpao qnmp bgcp pmbj' // Replace with your App Password
+                user: 'nfccapstoneproject@gmail.com',
+                pass: 'zkxy bugz pkdn miqj' // Replace with your App Password
             },
             tls: {
                 rejectUnauthorized: false
@@ -42,7 +42,7 @@ export async function handler(event, context) {
         await transporter.verify();
 
         const mailOptions = {
-            from: '"Your Name" <renatoablao24@gmail.com>',
+            from: '"Team Loigasm" <nfccapstoneproject@gmail.com>',
             to,
             subject,
             text,
