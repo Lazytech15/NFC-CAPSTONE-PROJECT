@@ -331,7 +331,7 @@ useEffect(() => {
   };
 
   async function sendEmail(to, subject, text) {
-    const response = await fetch('/.netlify/functions/sendEmail', {
+    const response = await fetch('https://next-gen-permss.netlify.app/.netlify/functions/sendEmail', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
