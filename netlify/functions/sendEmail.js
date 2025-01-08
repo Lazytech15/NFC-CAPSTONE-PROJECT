@@ -22,11 +22,21 @@ export async function handler(event, context) {
         const info = await transporter.sendMail(mailOptions);
         return {
             statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*', // Allow all origins
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST'
+            },
             body: JSON.stringify({ message: 'Email sent: ' + info.response })
         };
     } catch (error) {
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*', // Allow all origins
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST'
+            },
             body: JSON.stringify({ error: error.toString() })
         };
     }
