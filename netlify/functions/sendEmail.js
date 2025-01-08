@@ -23,7 +23,7 @@ export async function handler(event, context) {
         return {
             statusCode: 200,
             headers: {
-                'Access-Control-Allow-Origin': '*', // Allow all origins
+                'Access-Control-Allow-Origin': 'https://next-gen-permss.netlify.app', // Allow specific origin
                 'Access-Control-Allow-Headers': 'Content-Type',
                 'Access-Control-Allow-Methods': 'POST'
             },
@@ -33,7 +33,7 @@ export async function handler(event, context) {
         return {
             statusCode: 500,
             headers: {
-                'Access-Control-Allow-Origin': '*', // Allow all origins
+                'Access-Control-Allow-Origin': 'https://next-gen-permss.netlify.app', // Allow specific origin
                 'Access-Control-Allow-Headers': 'Content-Type',
                 'Access-Control-Allow-Methods': 'POST'
             },
