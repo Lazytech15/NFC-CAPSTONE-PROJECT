@@ -235,6 +235,14 @@ body{
     height: 400px;
     border-radius: 10px;
   }
+
+  /* 1400px and height 800px */
+  @media (max-width: 1800px) and (max-height: 900px) {
+    .status{
+      bottom: -150px;
+    }
+
+  }
   
   @media (max-width: 600px) {
     .carousel{

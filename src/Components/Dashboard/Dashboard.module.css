@@ -94,7 +94,7 @@
     align-items: center;
     width: 100%;
     transition: all 0.3s ease;
-    gap: 0.5em;
+    gap: 1em;
   }
   
   .messageBadge {
