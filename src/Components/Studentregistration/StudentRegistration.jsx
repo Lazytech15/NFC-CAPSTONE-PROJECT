@@ -76,7 +76,7 @@ const StudentRegistration = () => {
   const [statusType, setStatusType] = useState('info');
   const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState('');
+  
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
 
@@ -115,33 +115,6 @@ const StudentRegistration = () => {
     };
   }, [nfcReader]);
 
-    // Update useEffect to generate password when component mounts
-    useEffect(() => {
-      const newPassword = generatePassword();
-      setGeneratedPassword(newPassword);
-      setFormData(prev => ({
-        ...prev,
-        upass: newPassword
-      }));
-    }, []);
-
-    // Function to generate random password
-    const generatePassword = () => {
-      const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let password = '';
-      for (let i = 0; i < 8; i++) {
-        const randomIndex = Math.floor(Math.random() * charset.length);
-        password += charset[randomIndex];
-      }
-      return password;
-    };
-  
-    // Function to generate username
-    const generateUsername = (studentId) => {
-      const randomNum = Math.floor(10000 + Math.random() * 90000); // 5 random digits
-      return `${randomNum}_${studentId}@icct.com`;
-    };
-
   const handleSelfie = (e) => {
     const file = e.target.files[0];
     setSelfie(file);
@@ -156,28 +129,25 @@ const StudentRegistration = () => {
 
   const registerWithFirebaseAuth = async () => {
     try {
-      const username = generateUsername(formData.studentId);
+      // Create the user with email and password
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
-        username, // Use generated username instead of email
-        generatedPassword // Use generated password
+        formData.email, 
+        formData.upass
       );
       
+      // Send email verification
       await sendEmailVerification(userCredential.user);
       
-      // Update formData with the generated credentials
-      setFormData(prev => ({
-        ...prev,
-        email: username // Store the generated username in email field
-      }));
-      
-      return { user: userCredential.user, username };
+      return userCredential.user;
     } catch (error) {
       switch (error.code) {
         case 'auth/email-already-in-use':
-          throw new Error('Generated username is already in use');
+          throw new Error('Email is already registered');
         case 'auth/invalid-email':
-          throw new Error('Invalid username format');
+          throw new Error('Invalid email format');
+        case 'auth/weak-password':
+          throw new Error('Password is too weak. Use a stronger password');
         default:
           throw error;
       }
@@ -190,11 +160,8 @@ const StudentRegistration = () => {
     }
 
     try {
-      if (!window.NDEFReader) {
-        throw new Error('NFC not supported on this device');
-      }
-      const ndef = new window.NDEFReader();
       updateStatus('Waiting for NFC tag...', 'info');
+      const ndef = new NDEFReader();
       
       // Create abort controller for timeout
       const abortController = new AbortController();
@@ -235,10 +202,8 @@ const StudentRegistration = () => {
           reject(new Error('NFC scan aborted'));
         });
       });
-
     } catch (error) {
       updateStatus(error.message, 'error');
-      alert(error.message); // Display error via alert
       throw error;
     }
   };
@@ -274,56 +239,64 @@ const StudentRegistration = () => {
     try {
       setIsSaving(true);
       
-      // Step 1: Upload selfie first
+      // Step 1: Create Firebase Auth account first to get UID
+      updateStatus('Creating your account...', 'info');
+      const firebaseUser = await registerWithFirebaseAuth();
+      const uid = firebaseUser.uid;
+
+      // Step 2: Upload selfie
       const selfieUrl = await uploadSelfie();
       
-      // Step 2: Save initial data to Firestore
+      // Step 3: Save data to Firestore with UID
       updateStatus('Saving your registration details...', 'info');
       const position = "Student";
       const initialData = {
         ...formData,
+        uid: uid, // Store the Firebase UID
         nfcSerialNumber,
         selfieUrl,
         position,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        authProvider: 'email', // Track authentication method
+        customPassword: formData.upass // Store the custom password for dual auth
       };
   
-      const docRef = await addDoc(collection(db, 'RegisteredStudent'), initialData);
-      await updateDoc(docRef, { currentnfcId: docRef.id });
+      // Save in RegisteredStudent collection
+      const studentDocRef = await addDoc(collection(db, 'RegisteredStudent'), initialData);
+      await updateDoc(studentDocRef, { 
+        currentnfcId: studentDocRef.id,
+        documentId: studentDocRef.id // Store document ID for reference
+      });
+
+      // Also save in a users collection for authentication purposes
+      await setDoc(doc(db, 'users', uid), {
+        email: formData.email,
+        uid: uid,
+        role: 'student',
+        studentDocId: studentDocRef.id,
+        customPassword: formData.upass,
+        authMethods: ['email'],
+        createdAt: serverTimestamp()
+      });
+
       updateStatus('Registration details saved successfully!', 'success');
   
-      // Step 3: Write to NFC
+      // Step 4: Write to NFC
       updateStatus('Writing to NFC tag... Please keep your card in place', 'info');
       const ndef = new NDEFReader();
       await ndef.write({
         records: [{
           recordType: "text",
-          data: new TextEncoder().encode(docRef.id)
+          data: new TextEncoder().encode(studentDocRef.id)
         }]
       });
       updateStatus('NFC tag written successfully!', 'success');
   
-      // Step 4: Create Firebase Auth account last
-      updateStatus('Creating your account...', 'info');
-      const { user: firebaseUser, username } = await registerWithFirebaseAuth();
-      
-      // Step 5: Update Firestore document with Firebase UID and username
-      await updateDoc(docRef, { 
-        firebaseUserId: firebaseUser.uid,
-        username // Save the generated username
-      });
-  
       // Final success message
       updateStatus('Registration completed! Please check your email for verification.', 'success');
       
-      // Close NFC reader
-      if (nfcReader && typeof nfcReader.abort === 'function') {
-        try {
-          nfcReader.abort();
-        } catch (error) {
-          console.warn('Error closing NFC reader:', error);
-        }
-      }
+      // Sign out
+      await handleSignOut();
       
       // Reset form after delay
       setTimeout(() => {
@@ -331,17 +304,13 @@ const StudentRegistration = () => {
         resetForm();
       }, 5000);
   
-      return docRef.id;
+      return studentDocRef.id;
     } catch (error) {
       console.error('Registration Error:', error);
       let errorMessage = 'Registration failed: ';
       
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This email is already registered. Please use a different email.';
-      } else if (error.code === 'not-found') {
-        errorMessage = 'NFC tag not found. Please try again.';
-      } else if (error.code === 'network-error') {
-        errorMessage = 'Network connection issue. Please check your internet connection.';
       } else {
         errorMessage += error.message;
       }
@@ -352,7 +321,6 @@ const StudentRegistration = () => {
       setIsSaving(false);
     }
   };
-  
   
 
   const checkNfcAuthorization = async (serialNumber) => {
@@ -405,33 +373,6 @@ const StudentRegistration = () => {
     }
   };
 
-  const sendEmail = async (emailData) => {
-    try {
-      const response = await fetch('/.netlify/functions/sendEmail', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: emailData.to,
-          subject: emailData.subject,
-          text: emailData.message
-        })
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send email');
-      }
-  
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error sending email:', error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -439,7 +380,7 @@ const StudentRegistration = () => {
       updateStatus('NFC is not supported on this device', 'warning');
       return;
     }
-  
+
     try {
       // Process Netlify form first
       await processNetlifyForm(formData);
@@ -447,22 +388,14 @@ const StudentRegistration = () => {
       updateStatus('Waiting for NFC tag... Please place your card', 'info');
       await scanNfcTag();
       updateStatus('NFC tag detected successfully!', 'success');
-  
+
       if (!window.confirm('Do you want to complete the registration?')) {
         setNfcSerialNumber(null);
         updateStatus('');
         return;
       }
-  
-      const docId = await completeRegistration();
-  
-      // Send email after successful registration
-      await sendEmail({
-        to: formData.email,
-        subject: 'Registration Successful',
-        message: `Dear ${formData.name},\n\nYour registration is successful. Your student ID is ${formData.studentId}, your generated username is ${formData.email}, and your generated password is ${generatedPassword}.\n\nThank you!`
-      });
-  
+
+      await completeRegistration();
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
@@ -547,20 +480,15 @@ const StudentRegistration = () => {
           disabled={isSaving}
         />
 
-        <div className={styles.generatedCredentials}>
-          <input
-            type="text"
-            name="upass"
-            placeholder="Password"
-            value={generatedPassword}
-            readOnly
-            disabled
-            className={styles.generatedPassword}
-          />
-          <small className={styles.helpText}>
-            This is your auto-generated password. Please save it.
-          </small>
-        </div>
+        <input
+          type="text"
+          name="upass"
+          placeholder="Password"
+          value={formData.upass}
+          onChange={(e) => setFormData({...formData, upass: e.target.value})}
+          required
+          disabled={isSaving}
+        />
         
         <select
           name="campus"
