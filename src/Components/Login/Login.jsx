@@ -173,10 +173,14 @@ const Login = () => {
           throw new Error('Access denied. Please contact your administrator.');
         }
       } else {
-        // Google login
+        // Google login section
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
         const roleData = await checkUserRole(user.uid);
+
+        const usersRef = collection(db, 'users');
+        const userQuery = query(usersRef, where('email', '==', user.email));
+        const userSnapshot = await getDocs(userQuery);
 
         if (userSnapshot.empty) {
           throw new Error('User not found in the system');
