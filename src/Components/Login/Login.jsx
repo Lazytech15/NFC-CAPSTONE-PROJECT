@@ -7,7 +7,9 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  EmailAuthProvider,
+  linkWithCredential
 } from "firebase/auth";
 import { 
   getFirestore, 
@@ -16,7 +18,8 @@ import {
   where, 
   getDocs,
   doc,
-  getDoc 
+  getDoc,
+  updateDoc 
 } from "firebase/firestore";
 import Slider from 'react-slick';
 import "slick-carousel/slick/slick.css";
@@ -69,13 +72,11 @@ const Login = () => {
         ['Checking user permissions...']
       );
 
-      // Get user data from users collection
       const userData = await getUserByUid(uid);
       if (!userData) {
         return null;
       }
 
-      // Check role and get detailed data from appropriate collection
       let roleData = null;
       let role = userData.role;
 
@@ -101,7 +102,7 @@ const Login = () => {
           'grant-role --type ' + role,
           [`✓ ${role} privileges confirmed`]
         );
-        return role;
+        return { role, docId: roleData.id };
       }
 
       return null;
@@ -111,41 +112,98 @@ const Login = () => {
     }
   };
 
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (e) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError('');
     
     try {
       await updateStatus('authenticate --verify-credentials', ['Checking credentials...']);
       
-      // First try regular email/password login
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
+      // Determine login method based on form input
+      const isEmailLogin = email && password;
       
-      // Check user role using UID
-      const role = await checkUserRole(uid);
-      
-      if (role) {
-        await updateStatus(
-          'grant-access --role ' + role,
-          [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']
-        );
-        localStorage.setItem('userRole', role);
-        setIsLoggedIn(true);
-        setTimeout(() => navigate('/dashboard'), 1000);
+      if (isEmailLogin) {
+        // Check sign-in methods and authProvider
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        
+        // Get user document to check authProvider
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const userSnapshot = await getDocs(q);
+        
+        if (!userSnapshot.empty) {
+          const userData = userSnapshot.docs[0].data();
+          
+          if (userData.authProvider === 'google') {
+          // Clear input fields when Google account is detected
+              setEmail('');
+              setPassword('');
+
+            Swal.fire({
+              title: "Google Account Detected",
+              text: "This email is registered with Google. Please click the button below to sign in with Google.",
+              icon: "info"
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Proceed with email login
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const roleData = await checkUserRole(userCredential.user.uid);
+        
+        if (roleData) {
+          // Update authProvider if not set
+          const userRef = doc(db, 'users', userCredential.user.uid);
+          await updateDoc(userRef, {
+            authProvider: 'email'
+          });
+
+          await updateStatus(
+            'grant-access --role ' + roleData.role,
+            [`✓ Access granted as ${roleData.role}`, 'Redirecting to dashboard...']
+          );
+          localStorage.setItem('userRole', roleData.role);
+          setIsLoggedIn(true);
+          setTimeout(() => navigate('/dashboard'), 1000);
+        } else {
+          await signOut(auth);
+          throw new Error('Access denied. Please contact your administrator.');
+        }
       } else {
-        await updateStatus(
-          'verify-access --check-registration',
-          ['✗ Account not registered in the system']
-        );
-        await signOut(auth);
-        setError('Access denied. Please contact your administrator.');
-        Swal.fire({
-          title: "Access Denied!",
-          text: "Account not registered in the system",
-          icon: "error"
-        });
+        // Google login
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const roleData = await checkUserRole(user.uid);
+
+        if (userData.authProvider === 'email' && result.user) {
+          await updateNFCCredentialsForGoogleAuth(
+            result.user.email, 
+            ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent']
+          );
+          // Then update authProvider to 'google'
+        }
+        
+        if (roleData) {
+          // Update authProvider
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            authProvider: 'google'
+          });
+
+          await updateStatus(
+            'grant-access --role ' + roleData.role,
+            [`✓ Access granted as ${roleData.role}`, 'Redirecting to dashboard...']
+          );
+          localStorage.setItem('userRole', roleData.role);
+          setIsLoggedIn(true);
+          setTimeout(() => navigate('/dashboard'), 1000);
+        } else {
+          await signOut(auth);
+          throw new Error('Access denied. Please contact your administrator.');
+        }
       }
     } catch (err) {
       await updateStatus(
@@ -154,55 +212,7 @@ const Login = () => {
       );
       Swal.fire({
         title: "Access Denied!",
-        text: "Please check your email and password",
-        icon: "error"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Sign in with Google
-      const result = await signInWithPopup(auth, googleProvider);
-      const uid = result.user.uid;
-      
-      // Check user role using UID
-      const role = await checkUserRole(uid);
-      
-      if (role) {
-        await updateStatus(
-          'grant-access --role ' + role,
-          [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']
-        );
-        localStorage.setItem('userRole', role);
-        setIsLoggedIn(true);
-        setTimeout(() => navigate('/dashboard'), 1000);
-      } else {
-        await updateStatus(
-          'verify-access --check-registration',
-          ['✗ Account not registered in the system']
-        );
-        await signOut(auth);
-        setError('Access denied. Please contact your administrator.');
-        Swal.fire({
-          title: "Access Denied!",
-          text: "Account not registered in the system",
-          icon: "error"
-        });
-      }
-    } catch (err) {
-      await updateStatus(
-        'authenticate --verify-credentials',
-        ['✗ Authentication failed']
-      );
-      Swal.fire({
-        title: "Access Denied!",
-        text: "Authentication failed",
+        text: err.message || "Authentication failed. Please check your credentials.",
         icon: "error"
       });
     } finally {
@@ -383,14 +393,41 @@ const Login = () => {
           if (userData.uid) {
             // Get user data from users collection
             const userDoc = await getDoc(doc(db, 'users', userData.uid));
+            
             if (userDoc.exists()) {
-              // Sign in with stored credentials
-              await signInWithEmailAndPassword(auth, userData.email, userData.customPassword);
               await updateStatus(
-                'grant-role --type ' + roles[i],
-                [`✓ ${roles[i]} privileges confirmed`]
+                'authenticate --method nfc',
+                ['Authenticating with stored credentials...']
               );
-              return roles[i];
+              
+              try {
+                // First try with the nfcPassword if it exists
+                if (userData.nfcPassword) {
+                  await signInWithEmailAndPassword(auth, userData.email, userData.nfcPassword);
+                } else {
+                  // Fallback to customPassword if nfcPassword doesn't exist
+                  await signInWithEmailAndPassword(auth, userData.email, userData.customPassword);
+                  
+                  // If login successful with customPassword, store it as nfcPassword for future use
+                  const docRef = doc(db, collections[i], snapshot.docs[0].id);
+                  await updateDoc(docRef, {
+                    nfcPassword: userData.customPassword
+                  });
+                }
+  
+                await updateStatus(
+                  'grant-role --type ' + roles[i],
+                  [`✓ ${roles[i]} privileges confirmed`]
+                );
+                return roles[i];
+              } catch (authError) {
+                // If authentication fails, check if it's a Google-linked account
+                const methods = await fetchSignInMethodsForEmail(auth, userData.email);
+                if (methods.includes('google.com')) {
+                  throw new Error('Please update your NFC card settings. Account is now linked to Google.');
+                }
+                throw authError;
+              }
             }
           }
         }
@@ -398,6 +435,43 @@ const Login = () => {
       return null;
     } catch (error) {
       console.error("Error checking user role by NFC:", error);
+      throw error;
+    }
+  };
+  
+  // Helper function to update NFC password when user switches to Google auth
+  const updateNFCCredentialsForGoogleAuth = async (userEmail, collections) => {
+    try {
+      // Generate a secure random password for NFC login
+      const nfcPassword = Math.random().toString(36).slice(-12) + 
+                         Math.random().toString(36).slice(-12);
+      
+      // Search through all role collections
+      for (const collectionName of collections) {
+        const q = query(
+          collection(db, collectionName),
+          where("email", "==", userEmail)
+        );
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const docRef = doc(db, collectionName, snapshot.docs[0].id);
+          await updateDoc(docRef, {
+            nfcPassword: nfcPassword
+          });
+          
+          // Create a credential and link it to the account
+          const credential = EmailAuthProvider.credential(userEmail, nfcPassword);
+          const auth = getAuth();
+          if (auth.currentUser) {
+            await linkWithCredential(auth.currentUser, credential);
+          }
+          
+          break;
+        }
+      }
+    } catch (error) {
+      console.error("Error updating NFC credentials:", error);
       throw error;
     }
   };
@@ -446,24 +520,16 @@ const Login = () => {
       )}
 
 
-
         <div className={styles.login_card}>
           <h1 className={styles.login_title}>Login</h1>
           
-          {/* {nfcSupported && (
-            <div className={styles.nfc_status}>
-              <p>NFC is enabled. Tap your card to login.</p>
-            </div>
-          )} */}
-          
-          <form onSubmit={handleEmailLogin} className={styles.login_form}>
+          <form onSubmit={handleLogin} className={styles.login_form}>
             <div className={styles.form_group}>
               <input
                 type="email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
                 className={styles.login_input}
               />
             </div>
@@ -474,44 +540,20 @@ const Login = () => {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 className={styles.login_input}
               />
             </div>
             
-            {error && (
-              <div className={styles.error_message}>
-                {error}
-              </div>
-            )}
+            {error && <div className={styles.error_message}>{error}</div>}
             
             <button 
-              type="submit" 
+              onClick={handleLogin}
               className={styles.login_button}
               disabled={loading}
             >
-              {loading ? "Please wait.." : 'Login'}
+              {loading ? "Please wait..." : (email && password ? 'Login with Email' : 'Sign in with Google')}
             </button>
           </form>
-          
-          <div className={styles.divider}>
-            <span>Or continue with</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className={styles.google_button}
-          >
-            <svg className={styles.google_icon} viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
-              />
-            </svg>
-            Sign in with Google
-          </button>
         </div>
       </div>
     </div>
