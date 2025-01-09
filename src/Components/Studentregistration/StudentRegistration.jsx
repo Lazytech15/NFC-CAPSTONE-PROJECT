@@ -171,7 +171,7 @@ const StudentRegistration = () => {
         email: username // Store the generated username in email field
       }));
       
-      return userCredential.user;
+      return { user: userCredential.user, username };
     } catch (error) {
       switch (error.code) {
         case 'auth/email-already-in-use':
@@ -300,13 +300,14 @@ const StudentRegistration = () => {
   
       // Step 4: Create Firebase Auth account last
       updateStatus('Creating your account...', 'info');
-      const firebaseUser = await registerWithFirebaseAuth();
+      const { user: firebaseUser, username } = await registerWithFirebaseAuth();
       
-      // Step 5: Update Firestore document with Firebase UID
+      // Step 5: Update Firestore document with Firebase UID and username
       await updateDoc(docRef, { 
-        firebaseUserId: firebaseUser.uid 
+        firebaseUserId: firebaseUser.uid,
+        username // Save the generated username
       });
-
+  
       // Final success message
       updateStatus('Registration completed! Please check your email for verification.', 'success');
       
@@ -346,6 +347,7 @@ const StudentRegistration = () => {
       setIsSaving(false);
     }
   };
+  
   
 
   const checkNfcAuthorization = async (serialNumber) => {
@@ -447,13 +449,13 @@ const StudentRegistration = () => {
         return;
       }
   
-      await completeRegistration();
+      const docId = await completeRegistration();
   
       // Send email after successful registration
       await sendEmail({
         to: formData.email,
         subject: 'Registration Successful',
-        message: `Dear ${formData.name},\n\nYour registration is successful. Your student ID is ${formData.studentId} and your generated password is ${generatedPassword}.\n\nThank you!`
+        message: `Dear ${formData.name},\n\nYour registration is successful. Your student ID is ${formData.studentId}, your generated username is ${formData.email}, and your generated password is ${generatedPassword}.\n\nThank you!`
       });
   
     } catch (error) {
