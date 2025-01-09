@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { 
   getFirestore, doc, getDoc, addDoc, 
-  collection, serverTimestamp, updateDoc 
+  collection, serverTimestamp, updateDoc, setDoc 
 } from 'firebase/firestore';
 
 import { 
