@@ -76,7 +76,7 @@ const StudentRegistration = () => {
   const [statusType, setStatusType] = useState('info');
   const [nfcSerialNumber, setNfcSerialNumber] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [generatedPassword, setGeneratedPassword] = useState('');
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
 
@@ -115,6 +115,33 @@ const StudentRegistration = () => {
     };
   }, [nfcReader]);
 
+    // Update useEffect to generate password when component mounts
+    useEffect(() => {
+      const newPassword = generatePassword();
+      setGeneratedPassword(newPassword);
+      setFormData(prev => ({
+        ...prev,
+        upass: newPassword
+      }));
+    }, []);
+
+    // Function to generate random password
+    const generatePassword = () => {
+      const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let password = '';
+      for (let i = 0; i < 8; i++) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        password += charset[randomIndex];
+      }
+      return password;
+    };
+  
+    // Function to generate username
+    const generateUsername = (studentId) => {
+      const randomNum = Math.floor(10000 + Math.random() * 90000); // 5 random digits
+      return `${studentId}${randomNum}@icct.com`;
+    };
+
   const handleSelfie = (e) => {
     const file = e.target.files[0];
     setSelfie(file);
@@ -129,23 +156,28 @@ const StudentRegistration = () => {
 
   const registerWithFirebaseAuth = async () => {
     try {
+      const username = generateUsername(formData.studentId);
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
-        formData.email, 
-        formData.upass
+        username, // Use generated username instead of email
+        generatedPassword // Use generated password
       );
       
       await sendEmailVerification(userCredential.user);
+      
+      // Update formData with the generated credentials
+      setFormData(prev => ({
+        ...prev,
+        email: username // Store the generated username in email field
+      }));
       
       return userCredential.user;
     } catch (error) {
       switch (error.code) {
         case 'auth/email-already-in-use':
-          throw new Error('Email is already registered');
+          throw new Error('Generated username is already in use');
         case 'auth/invalid-email':
-          throw new Error('Invalid email format');
-        case 'auth/weak-password':
-          throw new Error('Password is too weak. Use a stronger password');
+          throw new Error('Invalid username format');
         default:
           throw error;
       }
@@ -158,8 +190,8 @@ const StudentRegistration = () => {
     }
 
     try {
-      updateStatus('Waiting for NFC tag...', 'info');
       const ndef = new NDEFReader();
+      updateStatus('Waiting for NFC tag...', 'info');
       
       // Create abort controller for timeout
       const abortController = new AbortController();
@@ -278,8 +310,14 @@ const StudentRegistration = () => {
       // Final success message
       updateStatus('Registration completed! Please check your email for verification.', 'success');
       
-      // Step 6: Sign out
-      await handleSignOut();
+      // Close NFC reader
+      if (nfcReader && typeof nfcReader.abort === 'function') {
+        try {
+          nfcReader.abort();
+        } catch (error) {
+          console.warn('Error closing NFC reader:', error);
+        }
+      }
       
       // Reset form after delay
       setTimeout(() => {
@@ -467,15 +505,20 @@ const StudentRegistration = () => {
           disabled={isSaving}
         />
 
-        <input
-          type="text"
-          name="upass"
-          placeholder="Password"
-          value={formData.upass}
-          onChange={(e) => setFormData({...formData, upass: e.target.value})}
-          required
-          disabled={isSaving}
-        />
+        <div className={styles.generatedCredentials}>
+          <input
+            type="text"
+            name="upass"
+            placeholder="Password"
+            value={generatedPassword}
+            readOnly
+            disabled
+            className={styles.generatedPassword}
+          />
+          <small className={styles.helpText}>
+            This is your auto-generated password. Please save it.
+          </small>
+        </div>
         
         <select
           name="campus"
