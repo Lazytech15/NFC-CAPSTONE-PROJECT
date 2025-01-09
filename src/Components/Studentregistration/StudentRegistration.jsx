@@ -398,6 +398,33 @@ const StudentRegistration = () => {
     }
   };
 
+  const sendEmail = async (emailData) => {
+    try {
+      const response = await fetch('/.netlify/functions/sendEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: emailData.to,
+          subject: emailData.subject,
+          text: emailData.message
+        })
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+  
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -405,7 +432,7 @@ const StudentRegistration = () => {
       updateStatus('NFC is not supported on this device', 'warning');
       return;
     }
-
+  
     try {
       // Process Netlify form first
       await processNetlifyForm(formData);
@@ -413,14 +440,22 @@ const StudentRegistration = () => {
       updateStatus('Waiting for NFC tag... Please place your card', 'info');
       await scanNfcTag();
       updateStatus('NFC tag detected successfully!', 'success');
-
+  
       if (!window.confirm('Do you want to complete the registration?')) {
         setNfcSerialNumber(null);
         updateStatus('');
         return;
       }
-
+  
       await completeRegistration();
+  
+      // Send email after successful registration
+      await sendEmail({
+        to: formData.email,
+        subject: 'Registration Successful',
+        message: `Dear ${formData.name},\n\nYour registration is successful. Your student ID is ${formData.studentId} and your generated password is ${generatedPassword}.\n\nThank you!`
+      });
+  
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
