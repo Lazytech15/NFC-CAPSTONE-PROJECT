@@ -139,7 +139,7 @@ const StudentRegistration = () => {
     // Function to generate username
     const generateUsername = (studentId) => {
       const randomNum = Math.floor(10000 + Math.random() * 90000); // 5 random digits
-      return `${studentId}${randomNum}@icct.com`;
+      return `${randomNum}_${studentId}@icct.com`;
     };
 
   const handleSelfie = (e) => {
@@ -190,7 +190,10 @@ const StudentRegistration = () => {
     }
 
     try {
-      const ndef = new NDEFReader();
+      if (!window.NDEFReader) {
+        throw new Error('NFC not supported on this device');
+      }
+      const ndef = new window.NDEFReader();
       updateStatus('Waiting for NFC tag...', 'info');
       
       // Create abort controller for timeout
@@ -232,8 +235,10 @@ const StudentRegistration = () => {
           reject(new Error('NFC scan aborted'));
         });
       });
+
     } catch (error) {
       updateStatus(error.message, 'error');
+      alert(error.message); // Display error via alert
       throw error;
     }
   };
