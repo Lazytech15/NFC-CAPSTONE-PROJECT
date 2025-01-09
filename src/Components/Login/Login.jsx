@@ -1,29 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
-import Slider from 'react-slick'; 
-import "slick-carousel/slick/slick.css"; 
-import "slick-carousel/slick/slick-theme.css";
-import Swal from 'sweetalert2'
-
-import { initializeApp } from "firebase/app";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  fetchSignInMethodsForEmail
+} from "firebase/auth";
 import { 
   getFirestore, 
   collection, 
   query, 
   where, 
-  getDocs 
+  getDocs,
+  doc,
+  getDoc 
 } from "firebase/firestore";
-
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  GoogleAuthProvider, 
-  signInWithPopup,
-  deleteUser 
-} from "firebase/auth";
-
+import Slider from 'react-slick';
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import Swal from 'sweetalert2';
 import { app } from '/utils/firebase-config.js';
 
 const googleProvider = new GoogleAuthProvider();
@@ -49,86 +47,65 @@ const Login = () => {
     // For very quick operations, add a minimum display time
     return new Promise(resolve => setTimeout(resolve, 800));
   };
-  
-  const checkUserRole = async (userEmail) => {
+
+  const getUserByUid = async (uid) => {
     try {
-      await updateStatus(
-        'check-role --user ' + userEmail,
-        ['Checking user permissions...']
-      );
-  
-      // Check in RegisteredAdmin collection
-      await updateStatus(
-        'verify-role --collection RegisteredAdmin',
-        ['Checking admin privileges...']
-      );
-      const adminQuery = query(
-        collection(db, "RegisteredAdmin"),
-        where("email", "==", userEmail)
-      );
-      const adminSnapshot = await getDocs(adminQuery);
-      if (!adminSnapshot.empty) {
-        await updateStatus(
-          'grant-role --type admin',
-          ['✓ Admin privileges confirmed']
-        );
-        return 'admin';
+      // First check the users collection
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        return userDoc.data();
       }
-  
-      // Check in RegisteredTeacher collection
-      await updateStatus(
-        'verify-role --collection RegisteredTeacher',
-        ['Checking teacher privileges...']
-      );
-      const teacherQuery = query(
-        collection(db, "RegisteredTeacher"),
-        where("email", "==", userEmail)
-      );
-      const teacherSnapshot = await getDocs(teacherQuery);
-      if (!teacherSnapshot.empty) {
-        await updateStatus(
-          'grant-role --type teacher',
-          ['✓ Teacher privileges confirmed']
-        );
-        return 'teacher';
-      }
-  
-      // Check in RegisteredStudent collection
-      await updateStatus(
-        'verify-role --collection RegisteredStudent',
-        ['Checking student privileges...']
-      );
-      const studentQuery = query(
-        collection(db, "RegisteredStudent"),
-        where("email", "==", userEmail)
-      );
-      const studentSnapshot = await getDocs(studentQuery);
-      if (!studentSnapshot.empty) {
-        await updateStatus(
-          'grant-role --type student',
-          ['✓ Student privileges confirmed']
-        );
-        return 'student';
-      }
-  
-      await updateStatus(
-        'verify-role --result none',
-        ['✗ No role assignments found']
-      );
-      setTimeout(() => {
-        setStatusMessage('');
-        setStatusDetails([]);
-      }, 1000);
       return null;
     } catch (error) {
+      console.error("Error fetching user data:", error);
+      return null;
+    }
+  };
+  
+  const checkUserRole = async (uid) => {
+    try {
       await updateStatus(
-        'verify-role --error',
-        ['✗ Error checking roles', error.message]
+        'check-role --user ' + uid,
+        ['Checking user permissions...']
       );
-      setTimeout(() => {
-        setStatusMessage('');
-        setStatusDetails([]);
-      }, 1000);
+
+      // Get user data from users collection
+      const userData = await getUserByUid(uid);
+      if (!userData) {
+        return null;
+      }
+
+      // Check role and get detailed data from appropriate collection
+      let roleData = null;
+      let role = userData.role;
+
+      switch (role) {
+        case 'admin':
+          await updateStatus('verify-role --collection RegisteredAdmin', ['Checking admin privileges...']);
+          roleData = await getDoc(doc(db, 'RegisteredAdmin', userData.adminDocId));
+          break;
+        case 'teacher':
+          await updateStatus('verify-role --collection RegisteredTeacher', ['Checking teacher privileges...']);
+          roleData = await getDoc(doc(db, 'RegisteredTeacher', userData.teacherDocId));
+          break;
+        case 'student':
+          await updateStatus('verify-role --collection RegisteredStudent', ['Checking student privileges...']);
+          roleData = await getDoc(doc(db, 'RegisteredStudent', userData.studentDocId));
+          break;
+        default:
+          return null;
+      }
+
+      if (roleData && roleData.exists()) {
+        await updateStatus(
+          'grant-role --type ' + role,
+          [`✓ ${role} privileges confirmed`]
+        );
+        return role;
+      }
+
+      return null;
+    } catch (error) {
       console.error("Error checking user role:", error);
       return null;
     }
@@ -137,13 +114,17 @@ const Login = () => {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setIsReading(true);
     setError('');
     
     try {
       await updateStatus('authenticate --verify-credentials', ['Checking credentials...']);
+      
+      // First try regular email/password login
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const role = await checkUserRole(userCredential.user.email);
+      const uid = userCredential.user.uid;
+      
+      // Check user role using UID
+      const role = await checkUserRole(uid);
       
       if (role) {
         await updateStatus(
@@ -152,32 +133,28 @@ const Login = () => {
         );
         localStorage.setItem('userRole', role);
         setIsLoggedIn(true);
-        // Add small delay before navigation
         setTimeout(() => navigate('/dashboard'), 1000);
       } else {
         await updateStatus(
           'verify-access --check-registration',
-          ['✗ Your account is not registered in the system']
+          ['✗ Account not registered in the system']
         );
-        setTimeout(() => {
-          setStatusMessage('');
-          setStatusDetails([]);
-        }, 1000);
         await signOut(auth);
         setError('Access denied. Please contact your administrator.');
+        Swal.fire({
+          title: "Access Denied!",
+          text: "Account not registered in the system",
+          icon: "error"
+        });
       }
     } catch (err) {
       await updateStatus(
         'authenticate --verify-credentials',
         ['✗ Authentication failed']
       );
-      setTimeout(() => {
-        setStatusMessage('');
-        setStatusDetails([]);
-      }, 1000);
       Swal.fire({
         title: "Access Denied!",
-        text: "Please check you email and password",
+        text: "Please check your email and password",
         icon: "error"
       });
     } finally {
@@ -187,12 +164,15 @@ const Login = () => {
   
   const handleGoogleLogin = async () => {
     setLoading(true);
-    setIsReading(true);
     setError('');
     
     try {
+      // Sign in with Google
       const result = await signInWithPopup(auth, googleProvider);
-      const role = await checkUserRole(result.user.email);
+      const uid = result.user.uid;
+      
+      // Check user role using UID
+      const role = await checkUserRole(uid);
       
       if (role) {
         await updateStatus(
@@ -200,32 +180,33 @@ const Login = () => {
           [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']
         );
         localStorage.setItem('userRole', role);
-        setIsLoggedIn(true); // Set logged in state
+        setIsLoggedIn(true);
         setTimeout(() => navigate('/dashboard'), 1000);
       } else {
         await updateStatus(
           'verify-access --check-registration',
-          ['✗ Your account is not registered in the system']
+          ['✗ Account not registered in the system']
         );
         await signOut(auth);
         setError('Access denied. Please contact your administrator.');
+        Swal.fire({
+          title: "Access Denied!",
+          text: "Account not registered in the system",
+          icon: "error"
+        });
       }
     } catch (err) {
       await updateStatus(
         'authenticate --verify-credentials',
-        ['✗ Authentication failed', authError.message]
-      )
-      setTimeout(() => {
-        setStatusMessage('');
-        setStatusDetails([]);
-      }, 1000);
+        ['✗ Authentication failed']
+      );
       Swal.fire({
         title: "Access Denied!",
-        text: "Please check youre email",
+        text: "Authentication failed",
         icon: "error"
       });
     } finally {
-      // setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -381,72 +362,43 @@ const Login = () => {
 
   const checkUserRoleByNFC = async (nfcId) => {
     try {
-      await updateStatus(
-        'verify-role --collection RegisteredAdmin',
-        ['Checking admin privileges...']
-      );
-      // Check in RegisteredAdmin collection
-      const adminQuery = query(
-        collection(db, "RegisteredAdmin"),
-        where("currentnfcId", "==", nfcId)
-      );
-      const adminSnapshot = await getDocs(adminQuery);
-      if (!adminSnapshot.empty) {
-        const userData = adminSnapshot.docs[0].data();
-        await signInWithEmailAndPassword(auth, userData.email, userData.upass);
+      // Check collections in sequence
+      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+      const roles = ['admin', 'teacher', 'student'];
+      
+      for (let i = 0; i < collections.length; i++) {
         await updateStatus(
-          'grant-role --type admin',
-          ['✓ Admin privileges confirmed']
+          `verify-role --collection ${collections[i]}`,
+          [`Checking ${roles[i]} privileges...`]
         );
-        return 'admin';
-      }
-
-      await updateStatus(
-        'verify-role --collection RegisteredTeacher',
-        ['Checking teacher privileges...']
-      );
-  
-      // Check in RegisteredTeacher collection
-      const teacherQuery = query(
-        collection(db, "RegisteredTeacher"),
-        where("currentnfcId", "==", nfcId)
-      );
-      const teacherSnapshot = await getDocs(teacherQuery);
-      if (!teacherSnapshot.empty) {
-        const userData = teacherSnapshot.docs[0].data();
-        await signInWithEmailAndPassword(auth, userData.email, userData.upass);
-        await updateStatus(
-          'grant-role --type teacher',
-          ['✓ Teacher privileges confirmed']
+        
+        const q = query(
+          collection(db, collections[i]),
+          where("currentnfcId", "==", nfcId)
         );
-        return 'teacher';
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const userData = snapshot.docs[0].data();
+          if (userData.uid) {
+            // Get user data from users collection
+            const userDoc = await getDoc(doc(db, 'users', userData.uid));
+            if (userDoc.exists()) {
+              // Sign in with stored credentials
+              await signInWithEmailAndPassword(auth, userData.email, userData.customPassword);
+              await updateStatus(
+                'grant-role --type ' + roles[i],
+                [`✓ ${roles[i]} privileges confirmed`]
+              );
+              return roles[i];
+            }
+          }
+        }
       }
-  
-      await updateStatus(
-        'verify-role --collection RegisteredStudent',
-        ['Checking student privileges...']
-      );
-
-      // Check in RegisteredStudent collection
-      const studentQuery = query(
-        collection(db, "RegisteredStudent"),
-        where("currentnfcId", "==", nfcId)
-      );
-      const studentSnapshot = await getDocs(studentQuery);
-      if (!studentSnapshot.empty) {
-        const userData = studentSnapshot.docs[0].data();
-        await signInWithEmailAndPassword(auth, userData.email, userData.upass);
-        await updateStatus(
-          'grant-role --type student',
-          ['✓ Student privileges confirmed']
-        );
-        return 'student';
-      }
-  
       return null;
     } catch (error) {
       console.error("Error checking user role by NFC:", error);
-      throw error; // Propagate the error to handle it in the calling function
+      throw error;
     }
   };
 
