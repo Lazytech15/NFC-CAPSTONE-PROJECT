@@ -178,12 +178,23 @@ const Login = () => {
         const user = result.user;
         const roleData = await checkUserRole(user.uid);
 
-        if (userData.authProvider === 'email' && result.user) {
-          await updateNFCCredentialsForGoogleAuth(
-            result.user.email, 
+        if (userSnapshot.empty) {
+          throw new Error('User not found in the system');
+        }
+        
+        const existingUserData = userSnapshot.docs[0].data();
+        
+        // Check if user is switching from email to Google
+        if (existingUserData.authProvider === 'email') {
+          await updateStatus(
+            'update-auth --provider google',
+            ['Updating authentication method...']
+          );
+        
+          // Update NFC credentials for Google auth
+          await updateNFCCredentialsForGoogleAuth(user.email, 
             ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent']
           );
-          // Then update authProvider to 'google'
         }
         
         if (roleData) {
@@ -456,15 +467,33 @@ const Login = () => {
         
         if (!snapshot.empty) {
           const docRef = doc(db, collectionName, snapshot.docs[0].id);
+          const userData = snapshot.docs[0].data();
+  
+          // Store the new NFC password
           await updateDoc(docRef, {
-            nfcPassword: nfcPassword
+            nfcPassword: nfcPassword,
+            customPassword: nfcPassword // Update customPassword as well for consistency
           });
           
-          // Create a credential and link it to the account
-          const credential = EmailAuthProvider.credential(userEmail, nfcPassword);
-          const auth = getAuth();
-          if (auth.currentUser) {
-            await linkWithCredential(auth.currentUser, credential);
+          try {
+            // Create and link email credential
+            const credential = EmailAuthProvider.credential(userEmail, nfcPassword);
+            if (auth.currentUser) {
+              await linkWithCredential(auth.currentUser, credential);
+            }
+          } catch (linkError) {
+            // If linking fails (credential might already exist), try to update it
+            console.log("Credential linking failed, might already exist:", linkError);
+            // The existing credential will still work with the new password
+          }
+          
+          // Also update the user document if it exists
+          if (userData.uid) {
+            const userRef = doc(db, 'users', userData.uid);
+            await updateDoc(userRef, {
+              authProvider: 'google',
+              nfcPassword: nfcPassword // Store NFC password in user document as well
+            });
           }
           
           break;
