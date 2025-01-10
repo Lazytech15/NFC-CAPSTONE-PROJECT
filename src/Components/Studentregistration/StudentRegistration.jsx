@@ -80,13 +80,23 @@ const StudentRegistration = () => {
   const fileInputRef = useRef(null);
   const existingImageInputRef = useRef(null);
 
+  const generatePassword = () => {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
+    }
+    return password;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     course: '',
     campus: '',
     studentId: '',
-    upass: ''
+    upass: generatePassword() // Initialize with a generated password
   });
 
   const updateStatus = (message, type = 'info') => {
@@ -568,11 +578,11 @@ const StudentRegistration = () => {
         <input
           type="text"
           name="upass"
-          placeholder="Password"
+          placeholder="Generated Password"
           value={formData.upass}
-          onChange={(e) => setFormData({...formData, upass: e.target.value})}
-          required
-          disabled={isSaving}
+          readOnly
+          disabled={true}
+          className={styles.generatedPassword}
         />
         
         <select
