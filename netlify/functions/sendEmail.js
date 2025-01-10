@@ -22,7 +22,7 @@ export async function handler(event, context) {
     }
 
     try {
-        const { to, subject, text } = JSON.parse(event.body);
+        const { to, subject, html } = JSON.parse(event.body);
 
         // Create transporter with App Password
         const transporter = nodemailer.createTransport({
@@ -45,8 +45,7 @@ export async function handler(event, context) {
             from: '"Team Loigasm" <nfccapstoneproject@gmail.com>',
             to,
             subject,
-            text,
-            html: `<div>${text}</div>` // Optional HTML version
+            html // Use HTML content directly
         };
 
         const info = await transporter.sendMail(mailOptions);
