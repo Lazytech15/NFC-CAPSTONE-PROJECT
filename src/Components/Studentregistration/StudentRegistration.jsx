@@ -383,7 +383,7 @@ const StudentRegistration = () => {
         body: JSON.stringify({
           to: emailData.to,
           subject: emailData.subject,
-          text: emailData.message
+          text: emailData.html
         })
       });
   
