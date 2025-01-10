@@ -51,47 +51,6 @@ const Login = () => {
     return new Promise(resolve => setTimeout(resolve, 800));
   };
 
-  const updateUserCredentials = async (uid, email, password, authProvider, roleData) => {
-    try {
-      // Update user document
-      const userRef = doc(db, 'users', uid);
-      await updateDoc(userRef, {
-        authProvider,
-        email,
-        lastLoginAt: new Date().toISOString()
-      });
-
-      // Update role-specific collection
-      const collectionMap = {
-        'admin': 'RegisteredAdmin',
-        'teacher': 'RegisteredTeacher',
-        'student': 'RegisteredStudent'
-      };
-
-      const collection_name = collectionMap[roleData.role];
-      if (collection_name) {
-        const q = query(
-          collection(db, collection_name),
-          where("uid", "==", uid)
-        );
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const docRef = doc(db, collection_name, snapshot.docs[0].id);
-          await updateDoc(docRef, {
-            email,
-            customPassword: password,
-            nfcPassword: password, // Use same password for NFC login
-            lastUpdated: new Date().toISOString()
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error updating credentials:", error);
-      throw error;
-    }
-  };
-
   const getUserByUid = async (uid) => {
     try {
       // First check the users collection
@@ -177,8 +136,10 @@ const Login = () => {
           const userData = userSnapshot.docs[0].data();
           
           if (userData.authProvider === 'google') {
-            setEmail('');
-            setPassword('');
+          // Clear input fields when Google account is detected
+              setEmail('');
+              setPassword('');
+
             Swal.fire({
               title: "Google Account Detected",
               text: "This email is registered with Google. Please click the button below to sign in with Google.",
@@ -194,14 +155,11 @@ const Login = () => {
         const roleData = await checkUserRole(userCredential.user.uid);
         
         if (roleData) {
-          // Update credentials for all authentication methods
-          await updateUserCredentials(
-            userCredential.user.uid,
-            email,
-            password,
-            'email',
-            roleData
-          );
+          // Update authProvider if not set
+          const userRef = doc(db, 'users', userCredential.user.uid);
+          await updateDoc(userRef, {
+            authProvider: 'email'
+          });
 
           await updateStatus(
             'grant-access --role ' + roleData.role,
@@ -236,22 +194,20 @@ const Login = () => {
             'update-auth --provider google',
             ['Updating authentication method...']
           );
-          
-          // Generate new secure password for credential storage
-          const securePassword = Math.random().toString(36).slice(-12) + 
-                               Math.random().toString(36).slice(-12);
-          
-          // Update credentials for all authentication methods
-          await updateUserCredentials(
-            user.uid,
-            user.email,
-            securePassword,
-            'google',
-            roleData
+        
+          // Update NFC credentials for Google auth
+          await updateNFCCredentialsForGoogleAuth(user.email, 
+            ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent']
           );
         }
         
         if (roleData) {
+          // Update authProvider
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            authProvider: 'google'
+          });
+
           await updateStatus(
             'grant-access --role ' + roleData.role,
             [`✓ Access granted as ${roleData.role}`, 'Redirecting to dashboard...']

@@ -434,13 +434,13 @@ const StudentRegistration = () => {
 
     // Send email after successful registration
     const emailContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                <h1>Welcome to Our School!</h1>
+        <div style="font-family: Courier, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #38005e; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="font-family: Verdana, sans-serif;">Welcome to Our School!</h1>
             </div>
             
             <div style="padding: 20px; background-color: #ffffff; border: 1px solid #dddddd;">
-                <div style="font-size: 24px; margin-bottom: 20px; color: #2563eb;">
+                <div style="font-family: Trebuchet MS, sans-serif; font-size: 24px; margin-bottom: 20px; color: #6b018b;">
                     Dear ${formData.name},
                 </div>
                 
@@ -449,19 +449,19 @@ const StudentRegistration = () => {
                 <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h2>Your Registration Details</h2>
                     <div style="margin: 10px 0;">
-                        <strong>Student ID:</strong> ${formData.studentId}
+                        <strong style="font-family: Helvetica, sans-serif;">Student ID:</strong> ${formData.studentId}
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong>Email:</strong> ${formData.email}
+                        <strong style="font-family: Helvetica, sans-serif;">Email:</strong> ${formData.email}
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong>Password:</strong> ${formData.upass}
+                        <strong style="font-family: Helvetica, sans-serif;">Password:</strong> ${formData.upass}
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong>Course:</strong> ${formData.course}
+                        <strong style="font-family: Helvetica, sans-serif;">Course:</strong> ${formData.course}
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong>Campus:</strong> ${formData.campus}
+                        <strong style="font-family: Helvetica, sans-serif;">Campus:</strong> ${formData.campus}
                     </div>
                 </div>
 
@@ -469,7 +469,7 @@ const StudentRegistration = () => {
                 
                 <p>To get started:</p>
                 <ol>
-                    <li>Visit our student portal: <a href="https://next-gen-permss.netlify.app/">Next Generation Permission</a></li>
+                    <li>Visit our student portal: <a style="color:#6b018b; text-decoration: none; font-weight: 800;" href="https://next-gen-permss.netlify.app/">Next Generation Permission</a></li>
                     <li>Please use Google Chrome Browser.</li>
                     <li>Log in with your email and password.</li> 
                     <li>You can use Google Sign-In (Note: Don’t fill up the username and password—just hit the login).</li> 
