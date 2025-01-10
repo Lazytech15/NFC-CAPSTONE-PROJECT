@@ -422,8 +422,6 @@ const StudentRegistration = () => {
         return;
       }
 
-      await completeRegistration();
-
     // Send email after successful registration
     const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -481,6 +479,8 @@ const StudentRegistration = () => {
         subject: 'Welcome to Our School - Registration Successful!',
         html: emailContent
     });
+
+    await completeRegistration();
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
