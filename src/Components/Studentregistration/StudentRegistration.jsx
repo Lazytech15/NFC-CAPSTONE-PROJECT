@@ -373,6 +373,33 @@ const StudentRegistration = () => {
     }
   };
 
+  const sendEmail = async (emailData) => {
+    try {
+      const response = await fetch('/.netlify/functions/sendEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: emailData.to,
+          subject: emailData.subject,
+          text: emailData.message
+        })
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+  
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -396,6 +423,111 @@ const StudentRegistration = () => {
       }
 
       await completeRegistration();
+
+    // Send email after successful registration
+    await sendEmail({
+      to: formData.email,
+      subject: 'Welcome to Our School - Registration Successful!',
+      html: `<!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+              .email-container {
+                  max-width: 600px;
+                  margin: 0 auto;
+                  font-family: Arial, sans-serif;
+                  color: #333333;
+              }
+              .header {
+                  background-color: #2563eb;
+                  color: white;
+                  padding: 20px;
+                  text-align: center;
+                  border-radius: 8px 8px 0 0;
+              }
+              .content {
+                  padding: 20px;
+                  background-color: #ffffff;
+                  border: 1px solid #dddddd;
+                  border-radius: 0 0 8px 8px;
+              }
+              .welcome-text {
+                  font-size: 24px;
+                  margin-bottom: 20px;
+                  color: #2563eb;
+              }
+              .credentials-box {
+                  background-color: #f3f4f6;
+                  padding: 15px;
+                  border-radius: 8px;
+                  margin: 20px 0;
+              }
+              .credentials-item {
+                  margin: 10px 0;
+                  font-size: 16px;
+              }
+              .footer {
+                  text-align: center;
+                  margin-top: 20px;
+                  color: #666666;
+                  font-size: 14px;
+              }
+              .highlight {
+                  color: #2563eb;
+                  font-weight: bold;
+              }
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <h1>Welcome to Our School!</h1>
+                </div>
+                <div class="content">
+                    <div class="welcome-text">
+                        Dear ${formData.name},
+                    </div>
+                    <p>Congratulations on successfully registering as a student! We're excited to have you join our academic community.</p>
+                    
+                    <div class="credentials-box">
+                        <h2>Your Registration Details</h2>
+                        <div class="credentials-item">
+                            <strong>Student ID:</strong> <span class="highlight">${formData.studentId}</span>
+                        </div>
+                        <div class="credentials-item">
+                            <strong>Email:</strong> <span class="highlight">${formData.email}</span>
+                        </div>
+                        <div class="credentials-item">
+                            <strong>Password:</strong> <span class="highlight">${formData.upass}</span>
+                        </div>
+                        <div class="credentials-item">
+                            <strong>Course:</strong> <span class="highlight">${formData.course}</span>
+                        </div>
+                        <div class="credentials-item">
+                            <strong>Campus:</strong> <span class="highlight">${formData.campus}</span>
+                        </div>
+                    </div>
+    
+                    <p>Please keep these credentials safe and change your password upon your first login.</p>
+                    
+                    <p>To get started:</p>
+                    <ol>
+                        <li>Visit our student portal</li>
+                        <li>Log in with your email and password</li>
+                        <li>Complete your email verification</li>
+                        <li>Update your password</li>
+                    </ol>
+    
+                    <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+    
+                    <div class="footer">
+                        <p>Best regards,<br>Team Loigasm</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>`
+    });
     } catch (error) {
       console.error('Registration Error:', error);
       updateStatus('Registration process failed: ' + error.message, 'error');
