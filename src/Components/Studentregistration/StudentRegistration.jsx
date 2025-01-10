@@ -469,10 +469,12 @@ const StudentRegistration = () => {
                 
                 <p>To get started:</p>
                 <ol>
-                    <li>Visit our student portal</li>
-                    <li>Log in with your email and password</li>
-                    <li>Complete your email verification</li>
-                    <li>Update your password</li>
+                    <li>Visit our student portal: <a href="https://next-gen-permss.netlify.app/">Next Generation Permission</a></li>
+                    <li>Please use Google Chrome Browser.</li>
+                    <li>Log in with your email and password.</li> 
+                    <li>You can use Google Sign-In (Note: Don’t fill up the username and password—just hit the login).</li> 
+                    <li>You can use your registered NFC Card by tapping it on your supported device (Note: Not applicable on iOS devices).</li> 
+                    <li>Update your password.</li>
                 </ol>
 
                 <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
