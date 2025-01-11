@@ -215,36 +215,73 @@ const Login = () => {
         
         if (roleData) {
           // Always update auth credentials when using Google
-          await updateNFCCredentialsForGoogleAuth(user.email, 
-            ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent']
-          );
-
-          await updateStatus(
-            'grant-access --role ' + roleData.role,
-            [`✓ Access granted as ${roleData.role}`, 'Redirecting to dashboard...']
-          );
-          localStorage.setItem('userRole', roleData.role);
-          setIsLoggedIn(true);
-          setTimeout(() => navigate('/dashboard'), 1000);
-        } else {
-          await signOut(auth);
-          throw new Error('Access denied. Please contact your administrator.');
-        }
+const handleLogin = async (e) => {
+  if (e) e.preventDefault();
+  setLoading(true);
+  setError('');
+  
+  try {
+    await updateStatus('authenticate --verify-credentials', ['Checking credentials...']);
+    
+    // Determine login method based on form input
+    const isEmailLogin = email && password;
+    
+    if (isEmailLogin) {
+      // Proceed directly with email login without checking provider
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const roleData = await checkUserRole(userCredential.user.uid);
+      
+      if (roleData) {
+        await updateStatus(
+          'grant-access --role ' + roleData.role,
+          [`✓ Access granted as ${roleData.role}`, 'Redirecting to dashboard...']
+        );
+        localStorage.setItem('userRole', roleData.role);
+        setIsLoggedIn(true);
+        setTimeout(() => navigate('/dashboard'), 1000);
+      } else {
+        await signOut(auth);
+        throw new Error('Access denied. Please contact your administrator.');
       }
-    } catch (err) {
-      await updateStatus(
-        'authenticate --verify-credentials',
-        ['✗ Authentication failed']
-      );
-      Swal.fire({
-        title: "Access Denied!",
-        text: err.message || "Authentication failed. Please check your credentials.",
-        icon: "error"
-      });
-    } finally {
-      setLoading(false);
+    } else {
+      // Google login section
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const roleData = await checkUserRole(user.uid);
+
+      if (roleData) {
+        // Update the user document only
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          authProvider: 'google'
+        });
+
+        await updateStatus(
+          'grant-access --role ' + roleData.role,
+          [`✓ Access granted as ${roleData.role}`, 'Redirecting to dashboard...']
+        );
+        localStorage.setItem('userRole', roleData.role);
+        setIsLoggedIn(true);
+        setTimeout(() => navigate('/dashboard'), 1000);
+      } else {
+        await signOut(auth);
+        throw new Error('Access denied. Please contact your administrator.');
+      }
     }
-  };
+  } catch (err) {
+    await updateStatus(
+      'authenticate --verify-credentials',
+      ['✗ Authentication failed']
+    );
+    Swal.fire({
+      title: "Access Denied!",
+      text: err.message || "Authentication failed. Please check your credentials.",
+      icon: "error"
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     let nfcReaderInstance = null;
@@ -397,129 +434,50 @@ const Login = () => {
   }, [isLoggedIn]); // Add isLoggedIn to dependency array
 
   const checkUserRoleByNFC = async (nfcId) => {
-    try {
-      const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
-      const roles = ['admin', 'teacher', 'student'];
+  try {
+    const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
+    const roles = ['admin', 'teacher', 'student'];
+    
+    for (let i = 0; i < collections.length; i++) {
+      const q = query(
+        collection(db, collections[i]),
+        where("currentnfcId", "==", nfcId)
+      );
+      const snapshot = await getDocs(q);
       
-      for (let i = 0; i < collections.length; i++) {
-        const q = query(
-          collection(db, collections[i]),
-          where("currentnfcId", "==", nfcId)
-        );
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const userData = snapshot.docs[0].data();
-          if (userData.uid) {
-            const userDoc = await getDoc(doc(db, 'users', userData.uid));
+      if (!snapshot.empty) {
+        const userData = snapshot.docs[0].data();
+        if (userData.uid) {
+          const userDoc = await getDoc(doc(db, 'users', userData.uid));
+          
+          if (userDoc.exists()) {
+            await updateStatus(
+              'authenticate --method nfc',
+              ['Authenticating with stored credentials...']
+            );
             
-            if (userDoc.exists()) {
-              await updateStatus(
-                'authenticate --method nfc',
-                ['Authenticating with stored credentials...']
-              );
-              
-              try {
-                // Check auth provider first
-                const methods = await fetchSignInMethodsForEmail(auth, userData.email);
-                
-                if (methods.includes('google.com')) {
-                  throw new Error('This account is linked to Google. Please use Google Sign-In.');
-                }
-                
-                // Try authentication with stored password
-                const password = userData.nfcPassword || userData.customPassword;
-                if (!password) {
-                  throw new Error('No valid password found for NFC authentication');
-                }
-                
-                await signInWithEmailAndPassword(auth, userData.email, password);
-                return roles[i];
-              } catch (authError) {
-                if (authError.message.includes('Google')) {
-                  throw authError;
-                }
-                // If regular auth fails, try with customPassword as fallback
-                if (userData.customPassword && userData.customPassword !== userData.nfcPassword) {
-                  try {
-                    await signInWithEmailAndPassword(auth, userData.email, userData.customPassword);
-                    
-                    // Update nfcPassword to match customPassword
-                    const docRef = doc(db, collections[i], snapshot.docs[0].id);
-                    await updateDoc(docRef, {
-                      nfcPassword: userData.customPassword
-                    });
-                    
-                    return roles[i];
-                  } catch (fallbackError) {
-                    throw new Error('Authentication failed. Please update your NFC card settings.');
-                  }
-                }
-                throw authError;
+            try {
+              // Use the existing password - try customPassword first, then fallback to nfcPassword
+              const password = userData.customPassword || userData.nfcPassword;
+              if (!password) {
+                throw new Error('No valid password found for NFC authentication');
               }
+              
+              await signInWithEmailAndPassword(auth, userData.email, password);
+              return roles[i];
+            } catch (authError) {
+              throw new Error('Authentication failed. Please verify your credentials.');
             }
           }
         }
       }
-      return null;
-    } catch (error) {
-      console.error("Error checking user role by NFC:", error);
-      throw error;
     }
-  };
-  
-  // Helper function to update NFC password when user switches to Google auth
-  const updateNFCCredentialsForGoogleAuth = async (userEmail, collections) => {
-    try {
-      // Generate a secure random password for NFC login
-      const nfcPassword = Math.random().toString(36).slice(-12) + 
-                         Math.random().toString(36).slice(-12);
-      
-      // Search through all role collections
-      for (const collectionName of collections) {
-        const q = query(
-          collection(db, collectionName),
-          where("email", "==", userEmail)
-        );
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const docRef = doc(db, collectionName, snapshot.docs[0].id);
-          
-          // Store both passwords to maintain consistency
-          await updateDoc(docRef, {
-            nfcPassword: nfcPassword,
-            customPassword: nfcPassword,
-            authProvider: 'google' // Add authProvider field
-          });
-          
-          // Update the user document
-          const userData = snapshot.docs[0].data();
-          if (userData.uid) {
-            const userRef = doc(db, 'users', userData.uid);
-            await updateDoc(userRef, {
-              authProvider: 'google',
-              nfcPassword: nfcPassword
-            });
-          }
-        }
-      }
-      
-      // Create and link email credential after updating documents
-      if (auth.currentUser) {
-        try {
-          const credential = EmailAuthProvider.credential(userEmail, nfcPassword);
-          await linkWithCredential(auth.currentUser, credential);
-        } catch (linkError) {
-          console.log("Credential already exists:", linkError);
-          // This is fine - we just updated the password in Firestore
-        }
-      }
-    } catch (error) {
-      console.error("Error updating NFC credentials:", error);
-      throw error;
-    }
-  };
+    return null;
+  } catch (error) {
+    console.error("Error checking user role by NFC:", error);
+    throw error;
+  }
+};
 
   const settings = { 
     dots: false, 
