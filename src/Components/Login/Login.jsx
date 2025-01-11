@@ -50,7 +50,7 @@ const Login = () => {
         return new Promise(resolve => setTimeout(resolve, 800));
     };
 
-    const getUser ByUid = async (uid) => {
+    const getUserByUid = async (uid) => {
         try {
             const userDoc = await getDoc(doc(db, 'users', uid));
             if (userDoc.exists()) {
