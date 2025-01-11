@@ -126,6 +126,18 @@ const Login = () => {
       if (isEmailLogin) {
         // Check sign-in methods and authProvider
         const methods = await fetchSignInMethodsForEmail(auth, email);
+
+        if (methods.includes('google.com')) {
+          setEmail('');
+          setPassword('');
+          Swal.fire({
+            title: "Google Account Detected",
+            text: "This email is registered with Google. Please sign in with Google.",
+            icon: "info"
+          });
+          setLoading(false);
+          return;
+        }
         
         // Get user document to check authProvider
         const usersRef = collection(db, 'users');
@@ -202,11 +214,10 @@ const Login = () => {
         }
         
         if (roleData) {
-          // Update authProvider
-          const userRef = doc(db, 'users', user.uid);
-          await updateDoc(userRef, {
-            authProvider: 'google'
-          });
+          // Always update auth credentials when using Google
+          await updateNFCCredentialsForGoogleAuth(user.email, 
+            ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent']
+          );
 
           await updateStatus(
             'grant-access --role ' + roleData.role,
@@ -387,16 +398,10 @@ const Login = () => {
 
   const checkUserRoleByNFC = async (nfcId) => {
     try {
-      // Check collections in sequence
       const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
       const roles = ['admin', 'teacher', 'student'];
       
       for (let i = 0; i < collections.length; i++) {
-        await updateStatus(
-          `verify-role --collection ${collections[i]}`,
-          [`Checking ${roles[i]} privileges...`]
-        );
-        
         const q = query(
           collection(db, collections[i]),
           where("currentnfcId", "==", nfcId)
@@ -406,7 +411,6 @@ const Login = () => {
         if (!snapshot.empty) {
           const userData = snapshot.docs[0].data();
           if (userData.uid) {
-            // Get user data from users collection
             const userDoc = await getDoc(doc(db, 'users', userData.uid));
             
             if (userDoc.exists()) {
@@ -416,30 +420,40 @@ const Login = () => {
               );
               
               try {
-                // First try with the nfcPassword if it exists
-                if (userData.nfcPassword) {
-                  await signInWithEmailAndPassword(auth, userData.email, userData.nfcPassword);
-                } else {
-                  // Fallback to customPassword if nfcPassword doesn't exist
-                  await signInWithEmailAndPassword(auth, userData.email, userData.customPassword);
-                  
-                  // If login successful with customPassword, store it as nfcPassword for future use
-                  const docRef = doc(db, collections[i], snapshot.docs[0].id);
-                  await updateDoc(docRef, {
-                    nfcPassword: userData.customPassword
-                  });
+                // Check auth provider first
+                const methods = await fetchSignInMethodsForEmail(auth, userData.email);
+                
+                if (methods.includes('google.com')) {
+                  throw new Error('This account is linked to Google. Please use Google Sign-In.');
                 }
-  
-                await updateStatus(
-                  'grant-role --type ' + roles[i],
-                  [`✓ ${roles[i]} privileges confirmed`]
-                );
+                
+                // Try authentication with stored password
+                const password = userData.nfcPassword || userData.customPassword;
+                if (!password) {
+                  throw new Error('No valid password found for NFC authentication');
+                }
+                
+                await signInWithEmailAndPassword(auth, userData.email, password);
                 return roles[i];
               } catch (authError) {
-                // If authentication fails, check if it's a Google-linked account
-                const methods = await fetchSignInMethodsForEmail(auth, userData.email);
-                if (methods.includes('google.com')) {
-                  throw new Error('Please update your NFC card settings. Account is now linked to Google.');
+                if (authError.message.includes('Google')) {
+                  throw authError;
+                }
+                // If regular auth fails, try with customPassword as fallback
+                if (userData.customPassword && userData.customPassword !== userData.nfcPassword) {
+                  try {
+                    await signInWithEmailAndPassword(auth, userData.email, userData.customPassword);
+                    
+                    // Update nfcPassword to match customPassword
+                    const docRef = doc(db, collections[i], snapshot.docs[0].id);
+                    await updateDoc(docRef, {
+                      nfcPassword: userData.customPassword
+                    });
+                    
+                    return roles[i];
+                  } catch (fallbackError) {
+                    throw new Error('Authentication failed. Please update your NFC card settings.');
+                  }
                 }
                 throw authError;
               }
@@ -471,36 +485,34 @@ const Login = () => {
         
         if (!snapshot.empty) {
           const docRef = doc(db, collectionName, snapshot.docs[0].id);
-          const userData = snapshot.docs[0].data();
-  
-          // Store the new NFC password
+          
+          // Store both passwords to maintain consistency
           await updateDoc(docRef, {
             nfcPassword: nfcPassword,
-            customPassword: nfcPassword // Update customPassword as well for consistency
+            customPassword: nfcPassword,
+            authProvider: 'google' // Add authProvider field
           });
           
-          try {
-            // Create and link email credential
-            const credential = EmailAuthProvider.credential(userEmail, nfcPassword);
-            if (auth.currentUser) {
-              await linkWithCredential(auth.currentUser, credential);
-            }
-          } catch (linkError) {
-            // If linking fails (credential might already exist), try to update it
-            console.log("Credential linking failed, might already exist:", linkError);
-            // The existing credential will still work with the new password
-          }
-          
-          // Also update the user document if it exists
+          // Update the user document
+          const userData = snapshot.docs[0].data();
           if (userData.uid) {
             const userRef = doc(db, 'users', userData.uid);
             await updateDoc(userRef, {
               authProvider: 'google',
-              nfcPassword: nfcPassword // Store NFC password in user document as well
+              nfcPassword: nfcPassword
             });
           }
-          
-          break;
+        }
+      }
+      
+      // Create and link email credential after updating documents
+      if (auth.currentUser) {
+        try {
+          const credential = EmailAuthProvider.credential(userEmail, nfcPassword);
+          await linkWithCredential(auth.currentUser, credential);
+        } catch (linkError) {
+          console.log("Credential already exists:", linkError);
+          // This is fine - we just updated the password in Firestore
         }
       }
     } catch (error) {
