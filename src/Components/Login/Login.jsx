@@ -169,9 +169,9 @@ const Login = () => {
                     throw new Error('User  not found in the system');
                 }
 
-                const existingUser Data = userSnapshot.docs[0].data();
+                const existingUserData = userSnapshot.docs[0].data();
 
-                if (existingUser Data.authProvider === 'email') {
+                if (existingUserData.authProvider === 'email') {
                     await updateStatus('update-auth --provider google', ['Updating authentication method...']);
                     await updateNFCCredentialsForGoogleAuth(user.email, ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent']);
                 }
