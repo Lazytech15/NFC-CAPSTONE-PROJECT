@@ -14,6 +14,7 @@ import Process_log from './Components/Process_log/Process_log.jsx';
 import RequestForm from './Components/Requestmessage/Requestmessage.jsx';
 import NFCScanner from './Components/Dashboard/Nfcscanner/Nfcscanner.jsx';
 import PWARegistration from './Components/PWARegistration.jsx';
+// import Dashboardeventlist from './Components/Dashboard/Dashboardeventlist.jsx';
 // import NotificationManager from './Components/NotificationManager.jsx';
 
 function App() {

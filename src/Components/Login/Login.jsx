@@ -63,6 +63,63 @@ const Login = () => {
         }
     };
 
+    const handleNFCAuthentication = async (nfcId) => {
+        try {
+            await updateStatus('read-nfc --get-data', [`✓ NFC data retrieved: ${nfcId}`]);
+            
+            const result = await Swal.fire({
+                title: 'NFC Card Detected',
+                text: 'Do you want to proceed with NFC authentication?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, proceed',
+                cancelButtonText: 'No, cancel',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            });
+
+            if (result.isConfirmed) {
+                await updateStatus('authenticate --verify-credentials', ['Checking user credentials...']);
+                const role = await checkUserRoleByNFC(nfcId);
+                
+                if (role) {
+                    await updateStatus('grant-access --role ' + role, [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']);
+                    localStorage.setItem('userRole', role);
+                    setIsLoggedIn(true);
+                    setTimeout(() => navigate('/dashboard'), 1000);
+                } else {
+                    await updateStatus('verify-access --check-registration', ['✗ NFC card is not registered in the system']);
+                    setTimeout(() => {
+                        setStatusMessage('');
+                        setStatusDetails([]);
+                    }, 1000);
+                    setError('NFC card is not registered in the system.');
+                    
+                    Swal.fire({
+                        title: "Access Denied!",
+                        text: "Please check if your NFC card is registered",
+                        icon: "error"
+                    });
+                }
+            } else {
+                await updateStatus('cancel-nfc --user-cancelled', ['NFC authentication cancelled by user']);
+                setTimeout(() => {
+                    setStatusMessage('');
+                    setStatusDetails([]);
+                }, 1000);
+            }
+        } catch (err) {
+            console.error('Error processing NFC card:', err);
+            setError('Failed to process NFC card.');
+            
+            Swal.fire({
+                title: "Authentication Error",
+                text: err.message || "Failed to process NFC card",
+                icon: "error"
+            });
+        }
+    };
+
     const checkUserRole = async (uid) => {
         try {
             await updateStatus('check-role --user ' + uid, ['Checking user permissions...']);
@@ -226,36 +283,7 @@ const Login = () => {
                             }
 
                             const nfcId = new TextDecoder().decode(nfcRecord.data);
-                            await updateStatus('read-nfc --get-data', [`✓ NFC data retrieved: ${nfcId}`]);
-
-                            try {
-                                await updateStatus('authenticate --verify-credentials', ['Checking user credentials...']);
-                                const role = await checkUserRoleByNFC(nfcId);
-                                if (role) {
-                                    await updateStatus('grant-access --role ' + role, [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']);
-                                    localStorage.setItem('userRole', role);
-                                    setIsLoggedIn(true);
-                                    setTimeout(() => navigate('/dashboard'), 1000);
-                                } else {
-                                    await updateStatus('verify-access --check-registration', ['✗ NFC card is not registered in the system']);
-                                    setTimeout(() => {
-                                        setStatusMessage('');
-                                        setStatusDetails([]);
-                                    }, 1000);
-                                    setError(' NFC card is not registered in the system.');
-                                }
-                            } catch (authError) {
-                                await updateStatus('authenticate --verify-credentials', ['✗ Authentication failed', authError.message]);
-                                setTimeout(() => {
-                                    setStatusMessage('');
-                                    setStatusDetails([]);
-                                }, 1000);
-                                Swal.fire({
-                                    title: "Access Denied!",
-                                    text: "Please check your NFC card if it is registered",
-                                    icon: "error"
-                                });
-                            }
+                            await handleNFCAuthentication(nfcId);
                         } catch (err) {
                             console.error('Error processing NFC card:', err);
                             setError('Failed to process NFC card.');

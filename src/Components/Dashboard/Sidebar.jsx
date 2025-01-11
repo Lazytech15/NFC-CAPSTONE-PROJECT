@@ -260,12 +260,6 @@ const Sidebar = () => {
       </Link>
     );
 
-  const scanners = [
-    "Scanner-001",
-    "Scanner-002",
-    "Scanner-003"
-  ];
-
   // Check if user is a student
   const isStudent = userData?.position === 'Student';
   const isTeacher = userData?.position === 'Teacher';

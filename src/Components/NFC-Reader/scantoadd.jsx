@@ -101,7 +101,7 @@ const NFCReaderAttendance = () => {
             const userQuery = query(
               collection(db, collectionName),
               where("currentnfcId", "==", nfcId),
-              where("position", "==", "student")
+              where("position", "==", "Student")
             );
             const userSnap = await getDocs(userQuery);
             

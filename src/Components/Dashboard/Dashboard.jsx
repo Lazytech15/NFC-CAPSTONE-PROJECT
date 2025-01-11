@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import StatisticsChart from './Dashboardstatistic';
 import styles from './Dashboard.module.css';
+import Dashboardeventlist from './Dashboardeventlist';
 
 function Dashboard() {
   const location = useLocation();
@@ -26,6 +27,9 @@ function Dashboard() {
             </div>
             {userData && userData.position !== "Student" && userData.position !== "Teacher" && (
               <StatisticsChart />
+            )}
+            {userData && userData.position !== "Admin" && userData.position !== "Teacher" && (
+              <Dashboardeventlist />
             )}
           </>
         ) : (
