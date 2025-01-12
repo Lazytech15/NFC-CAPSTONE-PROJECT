@@ -335,6 +335,47 @@ button:disabled {
   }
 }
 
+/* Add these new styles to your Eventlist.module.css file */
+
+.modal_overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.device_choice_overlay {
+  z-index: 1100; /* Higher than the regular modal overlay */
+}
+
+.nfc_scanner_overlay {
+  z-index: 1200; /* Highest z-index for the scanner overlay */
+}
+
+.modal_content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1001;
+}
+
+.device_choice_modal {
+  max-width: 400px;
+  z-index: 1101;
+}
+
+/* Keep your existing styles... */
+
 /* Responsive Styles */
 @media (max-width: 768px) {
   .event_list_container {
@@ -347,7 +388,7 @@ button:disabled {
 
   .modal_content {
     width: 95%;
-    height: 90vh;
+    height: 85vh;
     padding: 16px;
     margin-top: 20px;
   }
@@ -410,7 +451,7 @@ button:disabled {
   }
 
   .card_basic_info {
-    text-align: center;
+    text-align: left;
   }
 
   .device_choice_buttons {

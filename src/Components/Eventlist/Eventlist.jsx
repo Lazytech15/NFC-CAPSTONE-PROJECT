@@ -197,7 +197,6 @@ const EventList = () => {
   const handleContinue = (event) => {
     setShowDeviceChoice(true);
     setSelectedEvent(event);
-    setSelectedEvent(null);
   };
 
   const handleDeviceChoice = async (choice) => {
@@ -338,9 +337,10 @@ const EventList = () => {
         ))}
       </div>
 
+      {/* Device Choice Modal */}
       {showDeviceChoice && (
-        <div className={styles.modal_overlay}>
-          <div className={styles.modal_content}>
+        <div className={`${styles.modal_overlay} ${styles.device_choice_overlay}`}>
+          <div className={`${styles.modal_content} ${styles.device_choice_modal}`}>
             <h3>Choose Scanning Device</h3>
             <div className={styles.device_choice_buttons}>
               <button
@@ -362,7 +362,10 @@ const EventList = () => {
             </div>
             <button 
               className={`${Buttons.buttons} ${styles.close_button}`}
-              onClick={() => setShowDeviceChoice(false)}
+              onClick={() => {
+                setShowDeviceChoice(false);
+                setSelectedEvent(null);
+              }}
             >
               <X size={24} />
             </button>
@@ -370,8 +373,9 @@ const EventList = () => {
         </div>
       )}
 
+      {/* NFC Scanner Overlay */}
       {isScanning && (
-        <div className={styles.nfc_scanner_overlay}>
+        <div className={`${styles.modal_overlay} ${styles.nfc_scanner_overlay}`}>
           <div className={styles.nfc_scanner_content}>
             <div className={styles.nfc_animation}>
               <div className={styles.phone_outline}>
@@ -389,7 +393,8 @@ const EventList = () => {
         </div>
       )}
 
-      {selectedEvent && (
+      {/* Event Details Modal */}
+      {selectedEvent && !showDeviceChoice && (
         <div className={styles.modal_overlay} onClick={() => setSelectedEvent(null)}>
           <div className={styles.modal_content} onClick={e => e.stopPropagation()}>
             <div className={styles.modal_header}>
