@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
 import {
@@ -31,6 +31,8 @@ const googleProvider = new GoogleAuthProvider();
 const auth = getAuth();
 const db = getFirestore(app);
 
+const RECAPTCHA_SITE_KEY = '6LcqH7UqAAAAAHx2W0OhNceJ68TNJlxpFos3h1yv';
+
 const Login = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
@@ -43,6 +45,96 @@ const Login = () => {
     const [isReading, setIsReading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [statusDetails, setStatusDetails] = useState([]);
+    const [nfcEnabled, setNfcEnabled] = useState(true);
+    const [captchaVerified, setCaptchaVerified] = useState(false);
+    const [showCaptcha, setShowCaptcha] = useState(false);
+    const recaptchaRef = useRef(null);
+    const recaptchaWrapperRef = useRef(null);
+
+    useEffect(() => {
+        if (email && password) {
+            setShowCaptcha(true);
+        } else {
+            setShowCaptcha(false);
+            setCaptchaVerified(false);
+        }
+    }, [email, password]);
+
+    // Handle CAPTCHA initialization
+    useEffect(() => {
+        let script = null;
+        let grecaptchaInterval = null;
+
+        const initializeCaptcha = () => {
+            // Clear any existing CAPTCHA
+            if (recaptchaWrapperRef.current) {
+                recaptchaWrapperRef.current.innerHTML = '';
+            }
+
+            // Create new CAPTCHA container
+            const captchaDiv = document.createElement('div');
+            captchaDiv.id = 'recaptcha-container';
+            if (recaptchaWrapperRef.current) {
+                recaptchaWrapperRef.current.appendChild(captchaDiv);
+            }
+
+            // Render CAPTCHA
+            window.grecaptcha.render('recaptcha-container', {
+                'sitekey': RECAPTCHA_SITE_KEY,
+                'callback': onCaptchaVerified,
+                'expired-callback': onCaptchaExpired
+            });
+        };
+
+        if (showCaptcha) {
+            // Load reCAPTCHA script if not already loaded
+            if (!window.grecaptcha) {
+                script = document.createElement('script');
+                script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+
+                // Wait for grecaptcha to be available
+                grecaptchaInterval = setInterval(() => {
+                    if (window.grecaptcha && window.grecaptcha.render) {
+                        clearInterval(grecaptchaInterval);
+                        initializeCaptcha();
+                    }
+                }, 100);
+            } else {
+                // If script is already loaded, just initialize CAPTCHA
+                initializeCaptcha();
+            }
+        }
+
+        // Cleanup
+        return () => {
+            if (grecaptchaInterval) {
+                clearInterval(grecaptchaInterval);
+            }
+            if (script && script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
+        };
+    }, [showCaptcha]);
+
+    const onCaptchaVerified = (token) => {
+        setCaptchaVerified(true);
+        setError('');
+    };
+
+    const onCaptchaExpired = () => {
+        setCaptchaVerified(false);
+    };
+
+    const resetCaptcha = () => {
+        if (window.grecaptcha) {
+            window.grecaptcha.reset();
+        }
+        setCaptchaVerified(false);
+    };
+
 
     const updateStatus = (command, details) => {
         setStatusMessage(command);
@@ -64,49 +156,36 @@ const Login = () => {
     };
 
     const handleNFCAuthentication = async (nfcId) => {
+        // If NFC is disabled or user is logged in, ignore NFC authentication
+        if (!nfcEnabled || isLoggedIn) {
+            return;
+        }
+
         try {
             await updateStatus('read-nfc --get-data', [`✓ NFC data retrieved: ${nfcId}`]);
+            await updateStatus('authenticate --verify-credentials', ['Checking user credentials...']);
+            const role = await checkUserRoleByNFC(nfcId);
             
-            const result = await Swal.fire({
-                title: 'NFC Card Detected',
-                text: 'Do you want to proceed with NFC authentication?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, proceed',
-                cancelButtonText: 'No, cancel',
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33'
-            });
-
-            if (result.isConfirmed) {
-                await updateStatus('authenticate --verify-credentials', ['Checking user credentials...']);
-                const role = await checkUserRoleByNFC(nfcId);
-                
-                if (role) {
-                    await updateStatus('grant-access --role ' + role, [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']);
-                    localStorage.setItem('userRole', role);
-                    setIsLoggedIn(true);
-                    setTimeout(() => navigate('/dashboard'), 1000);
-                } else {
-                    await updateStatus('verify-access --check-registration', ['✗ NFC card is not registered in the system']);
-                    setTimeout(() => {
-                        setStatusMessage('');
-                        setStatusDetails([]);
-                    }, 1000);
-                    setError('NFC card is not registered in the system.');
-                    
-                    Swal.fire({
-                        title: "Access Denied!",
-                        text: "Please check if your NFC card is registered",
-                        icon: "error"
-                    });
-                }
+            if (role) {
+                await updateStatus('grant-access --role ' + role, [`✓ Access granted as ${role}`, 'Redirecting to dashboard...']);
+                localStorage.setItem('userRole', role);
+                setIsLoggedIn(true);
+                // Disable NFC after successful login
+                setNfcEnabled(false);
+                setTimeout(() => navigate('/dashboard'), 1000);
             } else {
-                await updateStatus('cancel-nfc --user-cancelled', ['NFC authentication cancelled by user']);
+                await updateStatus('verify-access --check-registration', ['✗ NFC card is not registered in the system']);
                 setTimeout(() => {
                     setStatusMessage('');
                     setStatusDetails([]);
                 }, 1000);
+                setError('NFC card is not registered in the system.');
+                
+                Swal.fire({
+                    title: "Access Denied!",
+                    text: "Please check if your NFC card is registered",
+                    icon: "error"
+                });
             }
         } catch (err) {
             console.error('Error processing NFC card:', err);
@@ -160,22 +239,26 @@ const Login = () => {
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
+
+        // Check CAPTCHA verification for email/password login
+        if (email && password && !captchaVerified) {
+            setError('Please complete the CAPTCHA verification');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
             await updateStatus('authenticate --verify-credentials', ['Checking credentials...']);
 
-            // Determine login method based on form input
             const isEmailLogin = email && password;
 
             if (isEmailLogin) {
-                // Proceed with email login
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const roleData = await checkUserRole(userCredential.user.uid);
 
                 if (roleData) {
-                    // Update authProvider if not set
                     const userRef = doc(db, 'users', userCredential.user.uid);
                     await updateDoc(userRef, {
                         authProvider: 'email'
@@ -249,6 +332,7 @@ const Login = () => {
                 text: err.message || "Authentication failed. Please check your credentials.",
                 icon: "error"
             });
+            resetCaptcha();
         } finally {
             setLoading(false);
         }
@@ -258,7 +342,13 @@ const Login = () => {
         let nfcReaderInstance = null;
 
         const checkNFCSupport = async () => {
-            if (isLoggedIn) return;
+            // Check if user is already logged in
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                setIsLoggedIn(true);
+                setNfcEnabled(false); // Disable NFC if user is logged in
+                return;
+            }
 
             if ('NDEFReader' in window) {
                 try {
@@ -275,6 +365,11 @@ const Login = () => {
                     }, 1000);
 
                     reader.onreading = async ({ message }) => {
+                        // Check if NFC is enabled before processing
+                        if (!nfcEnabled) {
+                            return;
+                        }
+
                         try {
                             const nfcRecord = message.records.find(record => record.recordType === "text");
                             if (!nfcRecord) {
@@ -322,7 +417,9 @@ const Login = () => {
         return async () => {
             if (nfcReaderInstance) {
                 try {
+                    // Properly clean up NFC reader
                     nfcReaderInstance.removeAllListeners?.();
+                    await nfcReaderInstance.abort?.();
                     setNfcReader(null);
                     setNfcSupported(false);
                     await updateStatus('cleanup-nfc --remove-listeners', ['✓ NFC reader cleaned up successfully']);
@@ -481,8 +578,18 @@ const Login = () => {
                                 className={styles.login_input}
                             />
                         </div>
+                        {/* Add reCAPTCHA container */}
+                        {showCaptcha && (
+                            <div className={styles.captcha_container}>
+                                <div ref={recaptchaWrapperRef}></div>
+                            </div>
+                        )}
                         {error && <div className={styles.error_message}>{error}</div>}
-                        <button onClick={handleLogin} className={styles.login_button} disabled={loading}>
+                        <button
+                            onClick={handleLogin}
+                            className={styles.login_button}
+                            disabled={loading || (email && password && !captchaVerified)}
+                        >
                             {loading ? "Please wait..." : (email && password ? 'Login with Email' : 'Sign in with Google')}
                         </button>
                     </form>

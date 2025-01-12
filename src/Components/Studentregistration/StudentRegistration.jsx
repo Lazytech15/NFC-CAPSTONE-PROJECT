@@ -96,6 +96,7 @@ const StudentRegistration = () => {
     course: '',
     campus: '',
     studentId: '',
+    section,
     upass: generatePassword() // Initialize with a generated password
   });
 
@@ -351,6 +352,7 @@ const StudentRegistration = () => {
       course: '',
       campus: '',
       studentId: '',
+      section,
       upass: ''
     });
     setSelfie(null);
@@ -449,19 +451,22 @@ const StudentRegistration = () => {
                 <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h2>Your Registration Details</h2>
                     <div style="margin: 10px 0;">
-                        <strong style="font-family: Helvetica, sans-serif;">Student ID:</strong> ${formData.studentId}
+                        <strong >Student ID:</strong> <span style="font-family: Helvetica, sans-serif;>${formData.studentId}</span>
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong style="font-family: Helvetica, sans-serif;">Email:</strong> ${formData.email}
+                        <strong >Email:</strong> <span style="font-family: Helvetica, sans-serif; text-decoration: none;>${formData.email}</span>
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong style="font-family: Helvetica, sans-serif;">Password:</strong> ${formData.upass}
+                        <strong >Password:</strong> <span style="font-family: Helvetica, sans-serif;>${formData.upass}</span>
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong style="font-family: Helvetica, sans-serif;">Course:</strong> ${formData.course}
+                        <strong >Course:</strong> <span style="font-family: Helvetica, sans-serif;>${formData.course}</span>
                     </div>
                     <div style="margin: 10px 0;">
-                        <strong style="font-family: Helvetica, sans-serif;">Campus:</strong> ${formData.campus}
+                        <strong >Campus:</strong> <span style="font-family: Helvetica, sans-serif;>${formData.section}</span>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <strong >Campus:</strong> <span style="font-family: Helvetica, sans-serif;>${formData.campus}</span>
                     </div>
                 </div>
 
@@ -573,6 +578,16 @@ const StudentRegistration = () => {
           placeholder="Student ID"
           value={formData.studentId}
           onChange={(e) => setFormData({...formData, studentId: e.target.value})}
+          required
+          disabled={isSaving}
+        />
+
+        <input
+          type="text"
+          name="studentId"
+          placeholder="Section"
+          value={formData.section}
+          onChange={(e) => setFormData({...formData, section: e.target.value})}
           required
           disabled={isSaving}
         />

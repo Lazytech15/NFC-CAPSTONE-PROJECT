@@ -4,20 +4,10 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { getDatabase, ref, onValue } from 'firebase/database';
 import styles from './Dashboardeventlist.module.css';
 import Loading from '../Loading/Loading';
+import Buttons from '../Button/Button.module.css';
 import { 
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Mail,
-  Info,
-  Users,
-  Timer,
-  Tag,
-  Image,
-  ChevronDown,
-  ChevronUp,
-  CheckCircle
+  Calendar, Clock, MapPin, User, Mail, Info, Users, Timer,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const EventList = () => {
@@ -42,28 +32,26 @@ const EventList = () => {
         
         querySnapshot.forEach((doc) => {
           const eventData = doc.data();
+          let shouldInclude = false;
+
+          // Case 1: Public events
+          if (eventData.PublicValue === "Public") {
+            shouldInclude = true;
+          }
           
-          if (eventData.PublicValue === "Private" && eventData.ForUser === "Antipolo") {
-            if (userData.position === "Student") {
-              const forUserArray = eventData.ForUser.split(",").map(item => item.trim());
-              if (forUserArray.includes(userData.section)) {
-                filteredEvents.push({
-                  id: doc.id,
-                  ...eventData
-                });
-              }
-            } 
-            else if (["Teacher", "Admin"].includes(userData.position)) {
-              const forUserArray = eventData.ForUser.split(",").map(item => item.trim());
-              if (forUserArray.includes(userData.position)) {
-                filteredEvents.push({
-                  id: doc.id,
-                  ...eventData
-                });
-              }
+          // Case 2 & 3: Private events
+          else if (eventData.PublicValue === "Private") {
+            // Check if the event is targeted for user's section
+            if (eventData.PublicTarget === userData?.campus && eventData.ForUser === userData?.section ) {
+              shouldInclude = true;
+            }
+            // Check if the event is targeted for user's campus or course
+            else if (eventData.ForUser === userData?.section || eventData.ForUser === userData?.course) {
+              shouldInclude = true;
             }
           }
-          else if (eventData.PublicValue !== "Private") {
+
+          if (shouldInclude) {
             filteredEvents.push({
               id: doc.id,
               ...eventData
@@ -157,7 +145,7 @@ const EventList = () => {
   if (events.length === 0) {
     return (
       <div className={styles.emptyContainer}>
-        <span className={styles.emptyMessage}>No events available for your section/position.</span>
+        <span className={styles.emptyMessage}>No events available.</span>
       </div>
     );
   }
@@ -229,7 +217,7 @@ const EventList = () => {
                   <Users size={20} />
                   <div>
                     <span className={styles.label}>For:</span>
-                    <span>{event.ForUser}</span>
+                    <span>{event.ForUser || 'All Campuses'}</span>
                   </div>
                 </div>
                 <div className={styles.eventInfo}>
@@ -252,7 +240,7 @@ const EventList = () => {
                 {event.status === "Ongoing" && userData?.position === "Student" && (
                   <div className={styles.attendanceSection}>
                     <button 
-                      className={styles.checkAttendanceButton}
+                      className={Buttons.buttons}
                       onClick={() => checkAttendance(event.id, event.selectedscanner)}
                       disabled={checkingAttendance[event.id]}
                     >

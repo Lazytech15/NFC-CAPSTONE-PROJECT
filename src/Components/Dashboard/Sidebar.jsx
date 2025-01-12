@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Mail,
+  Settings,
   MessageCircle 
 } from 'lucide-react';
 
@@ -347,6 +348,13 @@ const Sidebar = () => {
 
                 {(isStudent || isTeacher || isAdmin) && <MailboxLink />}
 
+                <li className={styles.navItem}>
+                  <Link to="/dashboard/settings" className={styles.navLink} onClick={() => setIsOpen(false)}>
+                    <Settings size={20} />
+                    <span>Settings</span>
+                  </Link>
+                </li>
+
               </>
             ) : isTeacher ? (
               // Teacher-specific navigation items
@@ -391,6 +399,13 @@ const Sidebar = () => {
                   <FolderOpen size={20} /> 
                   <span>File Manager</span> 
                 </div> 
+              </li>
+
+              <li className={styles.navItem}>
+                <Link to="/dashboard/settings" className={styles.navLink} onClick={() => setIsOpen(false)}>
+                  <Settings size={20} />
+                  <span>Settings</span>
+                </Link>
               </li>
               </>
 
@@ -480,6 +495,13 @@ const Sidebar = () => {
                   <FolderOpen size={20} /> 
                   <span>File Manager</span> 
                 </div> 
+              </li>
+
+              <li className={styles.navItem}>
+                <Link to="/dashboard/settings" className={styles.navLink} onClick={() => setIsOpen(false)}>
+                  <Settings size={20} />
+                  <span>Settings</span>
+                </Link>
               </li>
               </>
             )}

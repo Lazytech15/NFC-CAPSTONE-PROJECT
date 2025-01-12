@@ -15,9 +15,12 @@
   }
   
   .eventGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 2rem;
+    justify-content: center;
+    align-items: center;
+    justify-items: start;
   }
   
   .eventCard {
@@ -192,11 +195,23 @@
     }
   
     .header h1 {
-      font-size: 1.5rem;
+      font-size:var(--f-m);
     }
   
     .eventHeader h2 {
-      font-size: 1.25rem;
+      font-size: var(--f-sm);
+    }
+
+    .statusBadge{
+      font-size: var(--f-ss);
+    }
+
+    .expandedContent .label {
+      font-size: var(--f-sm);
+    }
+
+    .expandedContent span{
+      font-size: var(--f-ss);
     }
   
     .eventImage {

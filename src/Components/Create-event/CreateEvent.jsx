@@ -16,7 +16,6 @@ const CreateEvent = () => {
   const db = getFirestore();
   const storage = getStorage();
   
-  // Existing state declarations
   const [eventName, setEventName] = useState('');
   const [entryLimit, setEntryLimit] = useState('unlimited');
   const [maxEntries, setMaxEntries] = useState('');
@@ -32,10 +31,13 @@ const CreateEvent = () => {
   const [loading, setLoading] = useState(false);
   const [eventImage, setEventImage] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
+  const [publicValue, setPublicValue] = useState('Public');
+  const [publicTarget, setPublicTarget] = useState('');
+  const [forUser, setForUser] = useState('');
 
 
   // Mock data for ESP32 devices
-  const esp32Devices = ['ESP32-001', 'ESP32-002', 'ESP32-003'];
+  const esp32Devices = ['ESP32-001', 'ESP32-002', 'ESP32-003','Use mobile'];
 
   // Handle image upload
   const handleImageChange = (e) => {
@@ -68,7 +70,6 @@ const CreateEvent = () => {
     setLoading(true);
 
     try {
-      // Upload image first if exists
       const uploadedImageUrl = await uploadImage();
       
       const eventData = {
@@ -88,7 +89,10 @@ const CreateEvent = () => {
         creatorNfcId: userData?.currentnfcId || null,
         createdAt: new Date().toISOString(),
         createdBy: userData?.email || null,
-        name: userData?.name || null
+        name: userData?.name || null,
+        PublicValue: publicValue,
+        PublicTarget: publicTarget,
+        ForUser: forUser
       };
 
       const docRef = await addDoc(collection(db, "PendingEvent"), eventData);
@@ -121,6 +125,9 @@ const CreateEvent = () => {
     setEventImage(null);
     setImageUrl('');
     setLoading(false);
+    setPublicValue('Public');
+    setPublicTarget('');
+    setForUser('');
   };
 
   return (
@@ -229,12 +236,57 @@ const CreateEvent = () => {
                 name="Status"
                 onChange={(e) => setStatus(e.target.value)}
               >
-                <option value="pending" name="Status">Pending</option>
-                <option value="ongoing" name="Status">Ongoing</option>
+                <option value="Pending" name="Status">Pending</option>
+                <option value="Ongoing" name="Status">Ongoing</option>
                 {/* <option value="completed" name="Status">Completed</option> */}
                 {/* <option value="pause" name="Status">Pause</option> */}
                 {/* <option value="continued" name="Status">Continued</option> */}
               </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Scope</label>
+              <select 
+                className={styles.select}
+                value={publicValue}
+                name="Scope"
+                onChange={(e) => setPublicValue(e.target.value)}
+              >
+                <option value="Public">Public</option>
+                <option value="Private">Private</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Target Campus</label>
+              <select 
+                className={styles.select}
+                value={publicTarget}
+                name="Target Campus"
+                onChange={(e) => setPublicTarget(e.target.value)}
+              >
+                <option value="">Select Campus</option>
+                <option value="Cainta Campus">Cainta Campus</option>
+                <option value="Antipolo Campus">Antipolo Campus</option>
+                <option value="San Mateo Campus">San Mateo Campus</option>
+                <option value="Binangonan Campus">Binangonan Campus</option>
+                <option value="Sumulong Campus">Sumulong Campus</option>
+                <option value="Taytay Campus">Taytay Campus</option>
+                <option value="Angono Campus">Angono Campus</option>
+                <option value="Cogeo Campus">Cogeo Campus</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Target Users</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={forUser}
+                onChange={(e) => setForUser(e.target.value)}
+                placeholder="Enter section or course if not leave it blank"
+                disabled={publicValue === 'Public' && !publicTarget}
+              />
             </div>
 
             <div className={styles.formGroup}>

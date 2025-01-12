@@ -14,6 +14,7 @@ import Process_log from './Components/Process_log/Process_log.jsx';
 import RequestForm from './Components/Requestmessage/Requestmessage.jsx';
 import NFCScanner from './Components/Dashboard/Nfcscanner/Nfcscanner.jsx';
 import PWARegistration from './Components/PWARegistration.jsx';
+import Settings from './Components/Settings/Settings.jsx'
 // import Dashboardeventlist from './Components/Dashboard/Dashboardeventlist.jsx';
 // import NotificationManager from './Components/NotificationManager.jsx';
 
@@ -38,6 +39,7 @@ function App() {
               <Route path="request-message" element={<RequestForm />} />
               <Route path="nfc-scanner" element={<NFCScanner />} />
               <Route path="file-manager" element={<FileManager />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
