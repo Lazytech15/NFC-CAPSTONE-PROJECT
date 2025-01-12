@@ -454,10 +454,10 @@ const StudentRegistration = () => {
             <strong>Student ID:</strong> <span style="font-family: Helvetica, sans-serif;">${formData.studentId}</span>
           </div>
           <div style="margin: 10px 0;">
-            <strong>Email:</strong> <span style="font-family: Helvetica, sans-serif;">${formData.email}</span>
+            <strong>Email:</strong> <span style="font-family: Helvetica, sans-serif; color:#6b018b;">${formData.email}</span>
           </div>
           <div style="margin: 10px 0;">
-            <strong>Password:</strong> <span style="font-family: Helvetica, sans-serif;">${formData.upass}</span>
+            <strong>Password:</strong> <span style="font-family: Helvetica, sans-serif; color:#6b018b;">${formData.upass}</span>
           </div>
           <div style="margin: 10px 0;">
             <strong>Course:</strong> <span style="font-family: Helvetica, sans-serif;">${formData.course}</span>
