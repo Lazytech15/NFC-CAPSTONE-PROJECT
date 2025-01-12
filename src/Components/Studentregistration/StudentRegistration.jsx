@@ -96,7 +96,7 @@ const StudentRegistration = () => {
     course: '',
     campus: '',
     studentId: '',
-    section,
+    section:'',
     upass: generatePassword() // Initialize with a generated password
   });
 
@@ -584,7 +584,7 @@ const StudentRegistration = () => {
 
         <input
           type="text"
-          name="studentId"
+          name="section"
           placeholder="Section"
           value={formData.section}
           onChange={(e) => setFormData({...formData, section: e.target.value})}
