@@ -4,7 +4,7 @@ import { Edit2, Trash2, X, Image as ImageIcon, Smartphone, QrCode } from 'lucide
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import styles from './Eventlist.module.css';
-import { getDatabase, ref, onValue, off, set } from 'firebase/database';
+import { getDatabase, ref, onValue, off, set, push, remove } from 'firebase/database';
 import Buttons from '../Button/Button.module.css';
 
 const EventList = () => {
