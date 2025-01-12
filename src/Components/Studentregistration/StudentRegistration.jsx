@@ -171,9 +171,8 @@ const StudentRegistration = () => {
     }
 
     try {
-      updateStatus('Waiting for NFC tag...', 'info');
       const ndef = new NDEFReader();
-      
+
       // Create abort controller for timeout
       const abortController = new AbortController();
       const signal = abortController.signal;
@@ -182,6 +181,7 @@ const StudentRegistration = () => {
       await ndef.scan({ signal });
 
       return new Promise((resolve, reject) => {
+        updateStatus('Waiting for NFC tag...', 'info');
         const timeoutId = setTimeout(() => {
           abortController.abort();
           reject(new Error('NFC tag read timeout'));
@@ -219,16 +219,16 @@ const StudentRegistration = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      console.log('User signed out successfully');
-      navigate('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      updateStatus('Error signing out: ' + error.message, 'error');
-    }
-  };
+  // const handleSignOut = async () => {
+  //   try {
+  //     await signOut(auth);
+  //     console.log('User signed out successfully');
+  //     navigate('/login');
+  //   } catch (error) {
+  //     console.error('Error signing out:', error);
+  //     updateStatus('Error signing out: ' + error.message, 'error');
+  //   }
+  // };
 
   const uploadSelfie = async () => {
     if (!selfie) return null;
@@ -307,7 +307,7 @@ const StudentRegistration = () => {
       updateStatus('Registration completed! Please check your email for verification.', 'success');
       
       // Sign out
-      await handleSignOut();
+      // await handleSignOut();
       
       // Reset form after delay
       setTimeout(() => {
