@@ -156,10 +156,13 @@ const Login = () => {
     };
 
     const handleNFCAuthentication = async (nfcId) => {
-        // If NFC is disabled or user is logged in, ignore NFC authentication
-        if (!nfcEnabled || isLoggedIn) {
-            return;
-        }
+    // Check if user is already logged in
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+        setIsLoggedIn(true);
+        setNfcEnabled(false); // Disable NFC if user is logged in
+        return;
+    }
 
         try {
             await updateStatus('read-nfc --get-data', [`✓ NFC data retrieved: ${nfcId}`]);
@@ -431,6 +434,13 @@ const Login = () => {
     }, [isLoggedIn]);
 
     const checkUserRoleByNFC = async (nfcId) => {
+    // Check if user is already logged in
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+        setIsLoggedIn(true);
+        setNfcEnabled(false); // Disable NFC if user is logged in
+        return;
+    }
         try {
             const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
             const roles = ['admin', 'teacher', 'student'];
