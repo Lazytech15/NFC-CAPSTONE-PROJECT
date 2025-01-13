@@ -4,6 +4,7 @@ import { Edit2, Trash2, X, Image as ImageIcon, Smartphone, QrCode } from 'lucide
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import styles from './Eventlist.module.css';
+import Swal from 'sweetalert2';
 import { getDatabase, ref, onValue, off, set, push, remove, get } from 'firebase/database';
 import Buttons from '../Button/Button.module.css';
 
@@ -302,16 +303,16 @@ const EventList = () => {
     setShowDeviceChoice(true);
     setSelectedEvent(event);
   };
-
+  
   const handleDeviceChoice = async (choice) => {
     setScannerChoice(choice);
-    
+  
     try {
       // Update event status to in-progress
       await updateDoc(doc(db, 'PendingEvent', selectedEvent.id), {
-        status: 'ongoing'
+        status: 'Ongoing'
       });
-
+  
       // Initialize event in realtime database
       const eventRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
       await set(eventRef, {
@@ -319,18 +320,26 @@ const EventList = () => {
         eventName: selectedEvent.eventName,
         startTime: new Date().toISOString(),
       });
-
+  
       if (choice === 'scanner') {
         if (scannerStatus === 'in-use') {
-          alert('This scanner is currently being used by another job');
+          Swal.fire({
+            icon: 'warning',
+            title: 'Scanner In Use',
+            text: 'This scanner is currently being used by another job.'
+          });
           return;
         }
-
+  
         if (scannerStatus !== 'ready') {
-          alert('Scanner is not activated or unavailable');
+          Swal.fire({
+            icon: 'error',
+            title: 'Scanner Unavailable',
+            text: 'Scanner is not activated or unavailable.'
+          });
           return;
         }
-
+  
         if (selectedScanner) {
           await updateDoc(doc(db, 'ScannerDevices', selectedScanner.id), {
             job: selectedEvent.id
@@ -338,7 +347,11 @@ const EventList = () => {
         }
       } else if (choice === 'mobile') {
         if (!nfcSupported) {
-          alert('Your device does not support NFC scanning');
+          Swal.fire({
+            icon: 'error',
+            title: 'NFC Not Supported',
+            text: 'Your device does not support NFC scanning.'
+          });
           return;
         }
         setIsScanning(true);
@@ -346,32 +359,44 @@ const EventList = () => {
       }
     } catch (error) {
       console.error('Error initializing event:', error);
-      alert('Error starting the event');
+      Swal.fire({
+        icon: 'error',
+        title: 'Initialization Error',
+        text: 'Error starting the event.'
+      });
     }
-    
+  
     setShowDeviceChoice(false);
   };
-
+  
   const startNFCScanning = async () => {
     try {
       const ndef = new NDEFReader();
       await ndef.scan();
-      
-      ndef.addEventListener("reading", async ({ message }) => {
+  
+      ndef.addEventListener('reading', async ({ message }) => {
         try {
           const nfcId = new TextDecoder().decode(message.records[0].data);
-          
+  
           // Check for duplicate attendance
           const isDuplicate = await checkDuplicateAttendance(nfcId, selectedEvent.eventName);
           if (isDuplicate) {
-            alert('This card has already been scanned for this event.');
+            Swal.fire({
+              icon: 'warning',
+              title: 'Duplicate Scan',
+              text: 'This card has already been scanned for this event.'
+            });
             return;
           }
   
           // Get student data
           const studentData = await getStudentData(nfcId);
           if (!studentData) {
-            alert('This NFC card is not registered to any student.');
+            Swal.fire({
+              icon: 'error',
+              title: 'Unregistered NFC',
+              text: 'This NFC card is not registered to any student.'
+            });
             return;
           }
   
@@ -388,24 +413,37 @@ const EventList = () => {
             section: studentData.section,
             campus: studentData.campus
           };
-          
+  
           await push(scanDataRef, attendanceRecord);
-          
+  
           // Add this line to save the event to student's records
           await saveEventToStudent(studentData, selectedEvent, new Date().toISOString());
-          
-          alert(`Successfully recorded attendance for ${studentData.name}`);
+  
+          Swal.fire({
+            icon: 'success',
+            title: 'Attendance Recorded',
+            text: `Successfully recorded attendance for ${studentData.name}.`
+          });
         } catch (error) {
           console.error('Error processing NFC data:', error);
-          alert('Error scanning NFC card');
+          Swal.fire({
+            icon: 'error',
+            title: 'NFC Scanning Error',
+            text: 'Error scanning NFC card.'
+          });
         }
       });
     } catch (error) {
       console.error('Error starting NFC scan:', error);
-      alert('Error initializing NFC scanner');
+      Swal.fire({
+        icon: 'error',
+        title: 'Scanner Initialization Error',
+        text: 'Error initializing NFC scanner.'
+      });
       setIsScanning(false);
     }
   };
+  
 
   const handleComplete = async (event) => {
     try {
