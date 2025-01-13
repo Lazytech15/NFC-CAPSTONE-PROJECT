@@ -48,15 +48,30 @@ const EventList = () => {
 
   useEffect(() => {
     if (selectedEvent) {
-      checkScannerDevice();
-      setupAttendanceListener();
+      const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+      
+      onValue(attendanceRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          // Convert object to array and filter for current event
+          const attendanceArray = Object.entries(data)
+            .filter(([key]) => key !== 'eventId' && key !== 'eventName' && key !== 'startTime')
+            .map(([key, value]) => ({
+              id: key,
+              ...value
+            }))
+            .sort((a, b) => new Date(b.dateTimeIn) - new Date(a.dateTimeIn));
+          
+          setAttendanceData(attendanceArray);
+        } else {
+          setAttendanceData([]);
+        }
+      });
+
+      return () => {
+        off(attendanceRef);
+      };
     }
-    return () => {
-      if (selectedEvent) {
-        const scannerRef = ref(realtimeDb, `scanned-cards/${selectedEvent.selectedscanner}`);
-        off(scannerRef);
-      }
-    };
   }, [selectedEvent]);
 
     useEffect(() => {
@@ -179,10 +194,10 @@ const EventList = () => {
         // Delete from Firestore
         await deleteDoc(doc(db, 'PendingEvent', eventId));
         
-        // Delete from Realtime Database
+        // Delete from Realtime Database using event name
         if (selectedEvent) {
-          const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.selectedscanner}`);
-          await remove(attendanceRef);
+          const eventRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+          await remove(eventRef);
         }
         
         fetchEvents();
@@ -194,6 +209,7 @@ const EventList = () => {
     }
   };
 
+
   const handleContinue = (event) => {
     setShowDeviceChoice(true);
     setSelectedEvent(event);
@@ -202,9 +218,21 @@ const EventList = () => {
   const handleDeviceChoice = async (choice) => {
     setScannerChoice(choice);
     
-    if (choice === 'scanner') {
-      // Original scanner logic
-      try {
+    try {
+      // Update event status to in-progress
+      await updateDoc(doc(db, 'PendingEvent', selectedEvent.id), {
+        status: 'ongoing'
+      });
+
+      // Initialize event in realtime database
+      const eventRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+      await set(eventRef, {
+        eventId: selectedEvent.id,
+        eventName: selectedEvent.eventName,
+        startTime: new Date().toISOString(),
+      });
+
+      if (choice === 'scanner') {
         if (scannerStatus === 'in-use') {
           alert('This scanner is currently being used by another job');
           return;
@@ -215,33 +243,22 @@ const EventList = () => {
           return;
         }
 
-        await updateDoc(doc(db, 'PendingEvent', selectedEvent.id), {
-          status: 'in-progress'
-        });
-
         if (selectedScanner) {
-          const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedScanner.name}`);
-          await set(scanDataRef, {
-            eventId: selectedEvent.id,
-            eventName: selectedEvent.eventName,
-            startTime: new Date().toISOString(),
-            attendees: {}
-          });
-
           await updateDoc(doc(db, 'ScannerDevices', selectedScanner.id), {
             job: selectedEvent.id
           });
         }
-      } catch (error) {
-        console.error('Error updating event status:', error);
+      } else if (choice === 'mobile') {
+        if (!nfcSupported) {
+          alert('Your device does not support NFC scanning');
+          return;
+        }
+        setIsScanning(true);
+        startNFCScanning();
       }
-    } else if (choice === 'mobile') {
-      if (!nfcSupported) {
-        alert('Your device does not support NFC scanning');
-        return;
-      }
-      setIsScanning(true);
-      startNFCScanning();
+    } catch (error) {
+      console.error('Error initializing event:', error);
+      alert('Error starting the event');
     }
     
     setShowDeviceChoice(false);
@@ -256,8 +273,8 @@ const EventList = () => {
         try {
           const nfcId = new TextDecoder().decode(message.records[0].data);
           
-          // Save scanned data to realtime database
-          const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.selectedscanner}/attendees`);
+          // Save scanned data to realtime database under event name
+          const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
           const attendanceRecord = {
             nfcId,
             dateTimeIn: new Date().toISOString(),
@@ -265,7 +282,7 @@ const EventList = () => {
             eventName: selectedEvent.eventName
           };
           
-          await push(attendanceRef, attendanceRecord);
+          await push(scanDataRef, attendanceRecord);
           alert('NFC card scanned successfully!');
         } catch (error) {
           console.error('Error processing NFC data:', error);
@@ -292,6 +309,10 @@ const EventList = () => {
           job: null
         });
       }
+
+      // Remove event data from realtime database
+      const eventRef = ref(realtimeDb, `scanned-cards/${event.eventName}`);
+      await remove(eventRef);
 
       fetchEvents();
       setSelectedEvent(null);

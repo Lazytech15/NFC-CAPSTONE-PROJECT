@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import { getDatabase, ref, onValue, off } from 'firebase/database';
 import styles from './Dashboardeventlist.module.css';
 import Loading from '../Loading/Loading';
 import Buttons from '../Button/Button.module.css';
 import { 
   Calendar, Clock, MapPin, User, Mail, Info, Users, Timer,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, X
 } from 'lucide-react';
 
 const EventList = () => {
@@ -17,9 +17,12 @@ const EventList = () => {
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [checkingAttendance, setCheckingAttendance] = useState({});
   const [attendanceStatus, setAttendanceStatus] = useState({});
+  const [attendedEvents, setAttendedEvents] = useState(new Set());
   const location = useLocation();
   const userData = location.state?.userData;
   const realtimeDb = getDatabase();
+
+  const attendanceListeners = React.useRef({});
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -34,24 +37,35 @@ const EventList = () => {
           const eventData = doc.data();
           let shouldInclude = false;
 
-          // Case 1: Public events
           if (eventData.PublicValue === "Public") {
             shouldInclude = true;
-          }
-          
-          // Case 2 & 3: Private events
-          else if (eventData.PublicValue === "Private") {
-            // Check if the event is targeted for user's section
-            if (eventData.PublicTarget === userData?.campus && eventData.ForUser === userData?.section ) {
+          } else if (eventData.PublicValue === "Private") {
+            if (eventData.PublicTarget === userData?.campus && eventData.ForUser === userData?.section) {
               shouldInclude = true;
-            }
-            // Check if the event is targeted for user's campus or course
-            else if (eventData.ForUser === userData?.section || eventData.ForUser === userData?.course) {
+            } else if (eventData.ForUser === userData?.section || eventData.ForUser === userData?.course) {
               shouldInclude = true;
             }
           }
 
           if (shouldInclude) {
+            // Check if attendance is already recorded
+            const attendanceRef = ref(realtimeDb, `scanned-cards/${eventData.selectedscanner}/attendees`);
+            onValue(attendanceRef, (snapshot) => {
+              if (snapshot.exists()) {
+                const attendanceData = snapshot.val();
+                const found = Object.values(attendanceData).some(
+                  record => record.studentId === userData?.studentId
+                );
+                if (found) {
+                  setAttendedEvents(prev => new Set([...prev, doc.id]));
+                  setAttendanceStatus(prev => ({
+                    ...prev,
+                    [doc.id]: "✅ Your attendance has been recorded"
+                  }));
+                }
+              }
+            }, { onlyOnce: true });
+
             filteredEvents.push({
               id: doc.id,
               ...eventData
@@ -74,13 +88,17 @@ const EventList = () => {
       setError("User data not found");
       setIsLoading(false);
     }
-  }, [userData]);
 
-  const toggleEventDetails = (eventId) => {
-    setExpandedEvent(expandedEvent === eventId ? null : eventId);
-  };
+    return () => {
+      Object.values(attendanceListeners.current).forEach(listener => {
+        if (listener.ref) {
+          off(listener.ref);
+        }
+      });
+    };
+  }, [userData, realtimeDb]);
 
-  const checkAttendance = async (eventId, selectedscanner) => {
+  const startAttendanceCheck = (eventId, selectedscanner) => {
     if (!userData?.currentnfcId) {
       setAttendanceStatus(prev => ({
         ...prev,
@@ -95,35 +113,57 @@ const EventList = () => {
     }));
     setAttendanceStatus(prev => ({
       ...prev,
-      [eventId]: "Waiting for data..."
+      [eventId]: "Waiting for tap..."
     }));
 
     const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedscanner}/attendees`);
-    
-    onValue(attendanceRef, (snapshot) => {
+
+    const callback = onValue(attendanceRef, (snapshot) => {
       if (snapshot.exists()) {
         const attendanceData = snapshot.val();
         const found = Object.values(attendanceData).some(
           record => record.studentId === userData.studentId
         );
 
-        setAttendanceStatus(prev => ({
-          ...prev,
-          [eventId]: found ? "✅ Your attendance has been recorded" : "❌ No attendance record found"
-        }));
-      } else {
-        setAttendanceStatus(prev => ({
-          ...prev,
-          [eventId]: "No attendance records found for this event"
-        }));
+        if (found) {
+          setAttendedEvents(prev => new Set([...prev, eventId]));
+          setAttendanceStatus(prev => ({
+            ...prev,
+            [eventId]: "✅ Your attendance has been recorded"
+          }));
+          setCheckingAttendance(prev => ({
+            ...prev,
+            [eventId]: false
+          }));
+          off(attendanceRef);
+          delete attendanceListeners.current[eventId];
+        }
       }
-      setCheckingAttendance(prev => ({
-        ...prev,
-        [eventId]: false
-      }));
-    }, {
-      onlyOnce: true
     });
+
+    attendanceListeners.current[eventId] = {
+      ref: attendanceRef,
+      callback
+    };
+  };
+
+  const cancelAttendanceCheck = (eventId) => {
+    if (attendanceListeners.current[eventId]) {
+      off(attendanceListeners.current[eventId].ref);
+      delete attendanceListeners.current[eventId];
+    }
+    setCheckingAttendance(prev => ({
+      ...prev,
+      [eventId]: false
+    }));
+    setAttendanceStatus(prev => ({
+      ...prev,
+      [eventId]: null
+    }));
+  };
+
+  const toggleEventDetails = (eventId) => {
+    setExpandedEvent(expandedEvent === eventId ? null : eventId);
   };
 
   if (isLoading) {
@@ -157,7 +197,10 @@ const EventList = () => {
       </div>
       <div className={styles.eventGrid}>
         {events.map((event) => (
-          <div key={event.id} className={styles.eventCard}>
+          <div 
+            key={event.id} 
+            className={`${styles.eventCard} ${attendedEvents.has(event.id) ? styles.eventAttended : ''}`}
+          >
             {event.imageUrl && (
               <div className={styles.eventImage}>
                 <img src={event.imageUrl} alt={event.eventName} />
@@ -239,13 +282,26 @@ const EventList = () => {
                 
                 {event.status === "Ongoing" && userData?.position === "Student" && (
                   <div className={styles.attendanceSection}>
-                    <button 
-                      className={Buttons.buttons}
-                      onClick={() => checkAttendance(event.id, event.selectedscanner)}
-                      disabled={checkingAttendance[event.id]}
-                    >
-                      {checkingAttendance[event.id] ? 'Checking...' : 'Check Attendance'}
-                    </button>
+                    {!checkingAttendance[event.id] && !attendedEvents.has(event.id) ? (
+                      <button 
+                        className={Buttons.buttons}
+                        onClick={() => startAttendanceCheck(event.id, event.selectedscanner)}
+                      >
+                        Start Attendance Check
+                      </button>
+                    ) : checkingAttendance[event.id] ? (
+                      <div className={styles.attendanceCheckingContainer}>
+                        <div className={styles.loadingSpinner}>
+                          <Loading size="small" text={attendanceStatus[event.id]} />
+                        </div>
+                        <button 
+                          className={`${Buttons.buttons} ${styles.cancelButton}`}
+                          onClick={() => cancelAttendanceCheck(event.id)}
+                        >
+                          <X size={16} /> Cancel
+                        </button>
+                      </div>
+                    ) : null}
                     {attendanceStatus[event.id] && (
                       <div className={styles.attendanceStatus}>
                         {attendanceStatus[event.id]}

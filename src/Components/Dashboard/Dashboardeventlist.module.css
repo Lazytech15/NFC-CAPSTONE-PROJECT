@@ -24,6 +24,8 @@
   }
   
   .eventCard {
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -182,6 +184,51 @@
   .emptyMessage {
     color: #6b7280;
     font-size: 1rem;
+  }
+
+  .attendanceCheckingContainer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .loadingSpinner {
+    flex: 1;
+  }
+  
+  .cancelButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #dc2626 !important;
+  }
+
+  .eventAttended {
+    border-color: #22c55e; 
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+  }
+  
+  .attendanceCheckingContainer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .loadingSpinner {
+    flex: 1;
+  }
+  
+  .cancelButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #dc2626 !important;
+  }
+  
+  .attendanceStatus {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-weight: 500;
   }
   
   /* Responsive adjustments */
