@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { Image as ImageIcon, X } from 'lucide-react';
-import styles from './EventAttended.module.css';
+import styles from './Eventattended.module.css';
 
 const EventAttended = () => {
   const [attendedEvents, setAttendedEvents] = useState([]);
