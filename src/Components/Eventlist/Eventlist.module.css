@@ -186,7 +186,7 @@ table {
 
 th, td {
   padding: 12px;
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid #eee;
 }
 
@@ -194,6 +194,7 @@ th {
   background-color: #f8f9fa;
   font-weight: 600;
   color: #2d3748;
+  white-space: nowrap;
 }
 
 .no_data {

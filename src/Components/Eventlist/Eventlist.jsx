@@ -4,7 +4,7 @@ import { Edit2, Trash2, X, Image as ImageIcon, Smartphone, QrCode } from 'lucide
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import styles from './Eventlist.module.css';
-import { getDatabase, ref, onValue, off, set, push, remove } from 'firebase/database';
+import { getDatabase, ref, onValue, off, set, push, remove, get } from 'firebase/database';
 import Buttons from '../Button/Button.module.css';
 
 const EventList = () => {
@@ -46,23 +46,70 @@ const EventList = () => {
     };
   }, []);
 
+  // Add new function to fetch student data
+  const fetchStudentData = async (nfcId) => {
+    try {
+      const registeredStudentsRef = collection(db, 'RegisteredStudent');
+      const q = query(registeredStudentsRef, where('currentnfcId', '==', nfcId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const studentDoc = querySnapshot.docs[0];
+        return {
+          studentId: studentDoc.data().studentId,
+          name: studentDoc.data().name,
+          course: studentDoc.data().course,
+          section: studentDoc.data().section,
+          campus: studentDoc.data().campus
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (selectedEvent) {
       const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
       
-      onValue(attendanceRef, (snapshot) => {
+      onValue(attendanceRef, async (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
-          // Convert object to array and filter for current event
-          const attendanceArray = Object.entries(data)
+          
+          // Filter out metadata fields and convert to array
+          const rawAttendanceArray = Object.entries(data)
             .filter(([key]) => key !== 'eventId' && key !== 'eventName' && key !== 'startTime')
             .map(([key, value]) => ({
               id: key,
               ...value
             }))
             .sort((a, b) => new Date(b.dateTimeIn) - new Date(a.dateTimeIn));
-          
-          setAttendanceData(attendanceArray);
+
+          // Fetch student data for each attendance record
+          const enrichedAttendanceArray = await Promise.all(
+            rawAttendanceArray.map(async (record) => {
+              const studentData = await fetchStudentData(record.nfcId);
+              if (studentData) {
+                return {
+                  ...record,
+                  ...studentData
+                };
+              }
+              return {
+                ...record,
+                studentId: 'Unknown',
+                name: 'Unknown Student',
+                course: 'N/A',
+                section: 'N/A',
+                campus: 'N/A'
+              };
+            })
+          );
+
+          setAttendanceData(enrichedAttendanceArray);
+          console.log('Enriched attendance data:', enrichedAttendanceArray);
         } else {
           setAttendanceData([]);
         }
@@ -96,6 +143,47 @@ const EventList = () => {
         });
       }
     }, [selectedScanner, selectedEvent]);
+
+  // Add new helper function to check if student is registered
+  const getStudentData = async (nfcId) => {
+    try {
+      const registeredStudentsRef = collection(db, 'RegisteredStudent');
+      const q = query(registeredStudentsRef, where('currentnfcId', '==', nfcId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Return the first matching student's data
+        return {
+          id: querySnapshot.docs[0].id,
+          ...querySnapshot.docs[0].data()
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+      return null;
+    }
+  };
+
+  // Add function to check for duplicate attendance
+  const checkDuplicateAttendance = async (nfcId, eventName) => {
+    try {
+      const attendanceRef = ref(realtimeDb, `scanned-cards/${eventName}`);
+      const snapshot = await get(attendanceRef);
+      
+      if (snapshot.exists()) {
+        const attendanceData = snapshot.val();
+        // Check if any existing record has the same nfcId
+        return Object.values(attendanceData).some(record => 
+          record.nfcId === nfcId && record !== 'eventId' && record !== 'eventName' && record !== 'startTime'
+        );
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking duplicate attendance:', error);
+      return false;
+    }
+  };
 
     const setupAttendanceListener = () => {
       if (!selectedEvent) return;
@@ -273,17 +361,40 @@ const EventList = () => {
         try {
           const nfcId = new TextDecoder().decode(message.records[0].data);
           
+          // Check for duplicate attendance
+          const isDuplicate = await checkDuplicateAttendance(nfcId, selectedEvent.eventName);
+          if (isDuplicate) {
+            alert('This card has already been scanned for this event.');
+            return;
+          }
+  
+          // Get student data
+          const studentData = await getStudentData(nfcId);
+          if (!studentData) {
+            alert('This NFC card is not registered to any student.');
+            return;
+          }
+  
           // Save scanned data to realtime database under event name
           const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
           const attendanceRecord = {
             nfcId,
             dateTimeIn: new Date().toISOString(),
             eventId: selectedEvent.id,
-            eventName: selectedEvent.eventName
+            eventName: selectedEvent.eventName,
+            studentId: studentData.studentId,
+            studentName: studentData.name,
+            course: studentData.course,
+            section: studentData.section,
+            campus: studentData.campus
           };
           
           await push(scanDataRef, attendanceRecord);
-          alert('NFC card scanned successfully!');
+          
+          // Add this line to save the event to student's records
+          await saveEventToStudent(studentData, selectedEvent, new Date().toISOString());
+          
+          alert(`Successfully recorded attendance for ${studentData.name}`);
         } catch (error) {
           console.error('Error processing NFC data:', error);
           alert('Error scanning NFC card');
@@ -318,6 +429,34 @@ const EventList = () => {
       setSelectedEvent(null);
     } catch (error) {
       console.error('Error completing event:', error);
+    }
+  };
+
+  const saveEventToStudent = async (studentData, eventData, attendanceTime) => {
+    const db = getFirestore();
+    try {
+      const studentEventData = {
+        eventId: eventData.id,
+        eventName: eventData.eventName,
+        description: eventData.description,
+        location: eventData.locations,
+        imageUrl: eventData.imageUrl,
+        startTime: eventData.startTime,
+        endTime: eventData.endTime,
+        createdBy: eventData.createdBy,
+        status: 'attended',
+        attendanceRecorded: attendanceTime,
+        studentId: studentData.studentId,
+        studentName: studentData.name,
+        course: studentData.course,
+        section: studentData.section,
+        campus: studentData.campus
+      };
+  
+      await addDoc(collection(db, 'StudentEvents'), studentEventData);
+    } catch (error) {
+      console.error('Error saving event to student records:', error);
+      throw error;
     }
   };
 
@@ -501,7 +640,7 @@ const EventList = () => {
                     {attendanceData.map((attendee) => (
                       <tr key={attendee.id}>
                         <td>{attendee.studentId}</td>
-                        <td>{attendee.studentName}</td>
+                        <td>{attendee.name}</td>
                         <td>{attendee.course}</td>
                         <td>{attendee.section}</td>
                         <td>{attendee.campus}</td>

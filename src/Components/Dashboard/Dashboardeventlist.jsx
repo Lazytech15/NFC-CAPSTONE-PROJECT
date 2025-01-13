@@ -24,6 +24,153 @@ const EventList = () => {
 
   const attendanceListeners = React.useRef({});
 
+  // Ref to store all active listeners
+  const activeListeners = React.useRef({});
+
+    // Function to clean up listeners
+    const cleanupListeners = () => {
+      Object.values(activeListeners.current).forEach(listener => {
+        if (listener.ref) {
+          off(listener.ref);
+        }
+      });
+      activeListeners.current = {};
+    };
+
+    // Function to check attendance for a specific event
+    const checkEventAttendance = (event, studentId) => {
+      const attendanceRef = ref(realtimeDb, `scanned-cards/${event.eventName}`);
+      
+      return new Promise((resolve) => {
+        onValue(attendanceRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const attendanceData = snapshot.val();
+            const records = Object.values(attendanceData);
+            const hasAttended = records.some(record => 
+              record.studentId === studentId || 
+              record.nfcId === userData?.currentnfcId
+            );
+            
+            if (hasAttended) {
+              setAttendedEvents(prev => new Set([...prev, event.id]));
+              setAttendanceStatus(prev => ({
+                ...prev,
+                [event.id]: "✅ Your attendance has been recorded"
+              }));
+            }
+            resolve(hasAttended);
+          } else {
+            resolve(false);
+          }
+        }, {
+          onlyOnce: true
+        });
+      });
+    };
+
+// Function to set up realtime attendance monitoring
+const setupAttendanceMonitoring = (event) => {
+  if (activeListeners.current[event.id]) {
+    return; // Already monitoring this event
+  }
+
+  const attendanceRef = ref(realtimeDb, `scanned-cards/${event.eventName}`);
+  
+  const callback = onValue(attendanceRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const attendanceData = snapshot.val();
+      const records = Object.values(attendanceData);
+      const hasAttended = records.some(record => 
+        record.studentId === userData?.studentId ||
+        record.nfcId === userData?.currentnfcId
+      );
+
+      if (hasAttended) {
+        setAttendedEvents(prev => new Set([...prev, event.id]));
+        setAttendanceStatus(prev => ({
+          ...prev,
+          [event.id]: "✅ Your attendance has been recorded"
+        }));
+        setCheckingAttendance(prev => ({
+          ...prev,
+          [event.id]: false
+        }));
+      }
+    }
+  });
+
+  activeListeners.current[event.id] = {
+    ref: attendanceRef,
+    callback
+  };
+};
+
+useEffect(() => {
+  const fetchAndMonitorEvents = async () => {
+    if (!userData) {
+      setError("User data not found");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const db = getFirestore();
+      const pendingEventsRef = collection(db, "PendingEvent");
+      const querySnapshot = await getDocs(pendingEventsRef);
+      
+      const filteredEvents = [];
+      
+      for (const doc of querySnapshot.docs) {
+        const eventData = doc.data();
+        let shouldInclude = false;
+
+        // Check event visibility
+        if (eventData.PublicValue === "Public") {
+          shouldInclude = true;
+        } else if (eventData.PublicValue === "Private") {
+          if (eventData.PublicTarget === userData?.campus && eventData.ForUser === userData?.section) {
+            shouldInclude = true;
+          } else if (eventData.ForUser === userData?.section || eventData.ForUser === userData?.course) {
+            shouldInclude = true;
+          }
+        }
+
+        if (shouldInclude) {
+          const event = {
+            id: doc.id,
+            ...eventData
+          };
+          
+          filteredEvents.push(event);
+
+          // Check initial attendance status
+          await checkEventAttendance(event, userData.studentId);
+          
+          // Set up monitoring for ongoing events
+          if (event.status === "Ongoing") {
+            setupAttendanceMonitoring(event);
+          }
+        }
+      }
+
+      setEvents(filteredEvents);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setError("Failed to load events. Please try again later.");
+      setIsLoading(false);
+    }
+  };
+
+  fetchAndMonitorEvents();
+
+  // Cleanup function
+  return () => {
+    cleanupListeners();
+  };
+}, [userData, realtimeDb]);
+
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -98,59 +245,32 @@ const EventList = () => {
     };
   }, [userData, realtimeDb]);
 
-  const startAttendanceCheck = (eventId, selectedscanner) => {
+  const startAttendanceCheck = (event) => {
     if (!userData?.currentnfcId) {
       setAttendanceStatus(prev => ({
         ...prev,
-        [eventId]: "No NFC ID found for your account"
+        [event.id]: "No NFC ID found for your account"
       }));
       return;
     }
 
     setCheckingAttendance(prev => ({
       ...prev,
-      [eventId]: true
+      [event.id]: true
     }));
     setAttendanceStatus(prev => ({
       ...prev,
-      [eventId]: "Waiting for tap..."
+      [event.id]: "Waiting for tap..."
     }));
 
-    const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedscanner}/attendees`);
-
-    const callback = onValue(attendanceRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const attendanceData = snapshot.val();
-        const found = Object.values(attendanceData).some(
-          record => record.studentId === userData.studentId
-        );
-
-        if (found) {
-          setAttendedEvents(prev => new Set([...prev, eventId]));
-          setAttendanceStatus(prev => ({
-            ...prev,
-            [eventId]: "✅ Your attendance has been recorded"
-          }));
-          setCheckingAttendance(prev => ({
-            ...prev,
-            [eventId]: false
-          }));
-          off(attendanceRef);
-          delete attendanceListeners.current[eventId];
-        }
-      }
-    });
-
-    attendanceListeners.current[eventId] = {
-      ref: attendanceRef,
-      callback
-    };
+    // Set up or refresh the monitoring for this event
+    setupAttendanceMonitoring(event);
   };
 
   const cancelAttendanceCheck = (eventId) => {
-    if (attendanceListeners.current[eventId]) {
-      off(attendanceListeners.current[eventId].ref);
-      delete attendanceListeners.current[eventId];
+    if (activeListeners.current[eventId]) {
+      off(activeListeners.current[eventId].ref);
+      delete activeListeners.current[eventId];
     }
     setCheckingAttendance(prev => ({
       ...prev,
@@ -285,7 +405,7 @@ const EventList = () => {
                     {!checkingAttendance[event.id] && !attendedEvents.has(event.id) ? (
                       <button 
                         className={Buttons.buttons}
-                        onClick={() => startAttendanceCheck(event.id, event.selectedscanner)}
+                        onClick={() => startAttendanceCheck(event)}
                       >
                         Start Attendance Check
                       </button>

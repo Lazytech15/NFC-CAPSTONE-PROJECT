@@ -325,12 +325,10 @@ const Sidebar = () => {
             {isStudent ? (
               // Student-specific navigation items
               <>
-                <li className={styles.navItem}>
-                  <div className={styles.navLink} onClick={() => setIsOpen(false)}>
-                    <Archive size={20} />
-                    <span>Event Attendance</span>
-                  </div>
-                </li>
+                <Link to="/dashboard/attended-events" className={styles.navLink} onClick={() => setIsOpen(false)}>
+                  <ClipboardList size={20} />
+                  <span>Event Attended</span>
+                </Link>
 
                 <li className={styles.navItem}>
                   <div className={styles.navLink} onClick={() => setIsOpen(false)}>
