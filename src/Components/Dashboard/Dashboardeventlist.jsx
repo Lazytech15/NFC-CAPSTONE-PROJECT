@@ -125,7 +125,7 @@ useEffect(() => {
         let shouldInclude = false;
 
         // Check event visibility
-        if (eventData.PublicValue === "Public") {
+        if (eventData.PublicValue === "Public" && eventData.PublicTarget === "" || eventData.PublicValue === "Public" && eventData.PublicTarget === userData?.campus ) {
           shouldInclude = true;
         } else if (eventData.PublicValue === "Private") {
           if (eventData.PublicTarget === userData?.campus && eventData.ForUser === userData?.section) {
@@ -286,13 +286,13 @@ useEffect(() => {
     setExpandedEvent(expandedEvent === eventId ? null : eventId);
   };
 
-  if (isLoading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <Loading text="Loading events..." size="large" />
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className={styles.loadingContainer}>
+  //       <Loading text="Loading events..." size="large" />
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (
@@ -380,7 +380,12 @@ useEffect(() => {
                   <Users size={20} />
                   <div>
                     <span className={styles.label}>For:</span>
-                    <span>{event.ForUser || 'All Campuses'}</span>
+                    <span>
+                      {event.PublicValue === 'Public' && event.PublicTarget 
+                        ? event.PublicTarget 
+                        : (event.ForUser || 'All Campuses')
+                      }
+                    </span>
                   </div>
                 </div>
                 <div className={styles.eventInfo}>
