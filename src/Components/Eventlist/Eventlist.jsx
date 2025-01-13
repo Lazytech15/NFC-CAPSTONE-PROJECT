@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { Edit2, Trash2, X, Image as ImageIcon, Smartphone, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
@@ -433,7 +433,6 @@ const EventList = () => {
   };
 
   const saveEventToStudent = async (studentData, eventData, attendanceTime) => {
-    const db = getFirestore();
     try {
       const studentEventData = {
         eventId: eventData.id,
