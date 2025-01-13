@@ -114,6 +114,10 @@ const NFCReader = () => {
               <span>Course:</span>
               <span>{studentData.course}</span>
             </div>
+            <div classNam={styles.infoRow}>
+              <span>Section:</span>
+              <span>{studentData.section}</span>
+            </div>
             <div className={styles.infoRow}>
               <span>Campus:</span>
               <span>{studentData.campus}</span>
