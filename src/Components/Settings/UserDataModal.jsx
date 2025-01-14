@@ -3,7 +3,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { User } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import styles from './UserDataModal.module.css';
-import ProfileCard from './ProfileCard';
+import ProfileCard from './ProfileCard.jsx';
+import Buttons from '../Button/Button.module.css';
 
 const UserDataModal = ({ userData, isOpen, onClose }) => {
   const [qrCodeData, setQrCodeData] = useState('');
@@ -14,6 +15,7 @@ const UserDataModal = ({ userData, isOpen, onClose }) => {
   useEffect(() => {
     if (userData) {
       const formattedData = {
+        img: userData.selfieUrl,
         name: userData.name,
         email: userData.email,
         campus: userData.campus,
@@ -34,6 +36,7 @@ const UserDataModal = ({ userData, isOpen, onClose }) => {
   useEffect(() => {
     if (userData) {
       const compactData = {
+        img: userData.selfieUrl,
         name: userData.name,
         email: userData.email,
         academic: {
@@ -64,46 +67,46 @@ const UserDataModal = ({ userData, isOpen, onClose }) => {
   if (!isOpen) return null;
 
     // Function to handle QR code scan and image download
-    const handleQrScan = async () => {
+    // const handleQrScan = async () => {
       
-        if (modalContentRef.current) {
-          try {
-            // Capture the modal content as an image
-            const canvas = await html2canvas(modalContentRef.current, {
-              backgroundColor: '#ffffff',
-              scale: 2, // Increase quality
-              logging: false,
-              useCORS: true
-            });
+    //     if (modalContentRef.current) {
+    //       try {
+    //         // Capture the modal content as an image
+    //         const canvas = await html2canvas(modalContentRef.current, {
+    //           backgroundColor: '#ffffff',
+    //           scale: 2, // Increase quality
+    //           logging: false,
+    //           useCORS: true
+    //         });
     
-            // Convert canvas to blob
-            canvas.toBlob((blob) => {
-              // Create download link
-              const url = window.URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `${userData?.name || 'user'}-profile.png`;
+    //         // Convert canvas to blob
+    //         canvas.toBlob((blob) => {
+    //           // Create download link
+    //           const url = window.URL.createObjectURL(blob);
+    //           const link = document.createElement('a');
+    //           link.href = url;
+    //           link.download = `${userData?.name || 'user'}-profile.png`;
               
-              // Trigger download
-              document.body.appendChild(link);
-              link.click();
+    //           // Trigger download
+    //           document.body.appendChild(link);
+    //           link.click();
               
-              // Cleanup
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(url);
-            }, 'image/png', 1.0);
-          } catch (error) {
-            console.error('Error generating image:', error);
-          }
-        }
-      };
+    //           // Cleanup
+    //           document.body.removeChild(link);
+    //           window.URL.revokeObjectURL(url);
+    //         }, 'image/png', 1.0);
+    //       } catch (error) {
+    //         console.error('Error generating image:', error);
+    //       }
+    //     }
+    //   };
 
       return (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent} ref={modalContentRef}>
             <div className={styles.modalHeader}>
               <h1 className={styles.title}>Profile Overview</h1>
-              <button className={styles.closeButton} onClick={onClose}>&times;</button>
+              <button className={Buttons.buttons} onClick={onClose}>X</button>
             </div>
     
             <div className={styles.navigation}>
@@ -127,6 +130,14 @@ const UserDataModal = ({ userData, isOpen, onClose }) => {
               >
                 <User size={20} />
                 <span>Background</span>
+              </button>
+
+              <button
+                className={`${styles.navButton} ${activeTab === 'share' ? styles.active : ''}`}
+                onClick={() => { setActiveTab('share'); setIsModalOpen(true); }}
+              >
+                <User size={20} />
+                <span>Share Profile</span>
               </button>
             </div>
 
@@ -242,7 +253,25 @@ const UserDataModal = ({ userData, isOpen, onClose }) => {
                 disabled
               />
             </div>
-            {/* <div className={styles.qrSection}>
+          </form>
+        )}
+            {activeTab === 'share' && (
+                <ProfileCard 
+                  userData={userData}
+                  isOpen={isModalOpen}
+                  onClose={() => setIsModalOpen(false)}
+                />
+              )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UserDataModal;
+
+
+           {/* <div className={styles.qrSection}>
               <h3>Profile QR Code</h3>
               <div className={styles.qrCode}>
                 {qrCodeData && (
@@ -260,17 +289,3 @@ const UserDataModal = ({ userData, isOpen, onClose }) => {
                 )}
               </div>
             </div> */}
-            <ProfileCard 
-              userData={userData}
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-            />
-          </form>
-        )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default UserDataModal;

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc,addDoc } from 'firebase/firestore';
-import { getDatabase, ref, push, get, onValue } from 'firebase/database';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, addDoc } from 'firebase/firestore';
+import { getDatabase, ref, push, get, onValue, set } from 'firebase/database';
 import { format } from 'date-fns';
 import styles from './Nfcreader.module.css';
 import Buttons from '../Button/Button.module.css';
 import { app } from '/utils/firebase-config.js';
 import { X } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const NFCReaderAttendance = () => {
   const [events, setEvents] = useState([]);
@@ -29,23 +30,31 @@ const NFCReaderAttendance = () => {
 
   useEffect(() => {
     if (selectedEvent) {
-      const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.selectedscanner}/attendees`);
-      const unsubscribe = onValue(attendanceRef, (snapshot) => {
+      const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+      
+      onValue(attendanceRef, async (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const attendanceArray = Object.entries(data).map(([key, value]) => ({
-            id: key,
-            ...value
-          }));
+          // Filter out metadata fields and convert to array
+          const attendanceArray = Object.entries(data)
+            .filter(([key]) => key !== 'eventId' && key !== 'eventName' && key !== 'startTime')
+            .map(([key, value]) => ({
+              id: key,
+              ...value
+            }))
+            .sort((a, b) => new Date(b.dateTimeIn) - new Date(a.dateTimeIn));
+
           setAttendanceData(attendanceArray);
         } else {
           setAttendanceData([]);
         }
       });
 
-      return () => unsubscribe();
-    } else {
-      setAttendanceData([]);
+      return () => {
+        // Cleanup listener
+        const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+        off(attendanceRef);
+      };
     }
   }, [selectedEvent]);
 
@@ -67,6 +76,11 @@ const NFCReaderAttendance = () => {
     e.preventDefault();
     if (!studentId) {
       setError('Please enter a student ID');
+      return;
+    }
+
+    if (selectedEvent.status === 'Pending') {
+      setError('Cannot record attendance for pending events');
       return;
     }
 
@@ -111,20 +125,104 @@ const NFCReaderAttendance = () => {
       }
 
       const studentData = studentSnapshot.docs[0].data();
-      setVerifiedUser({
-        ...studentData,
-        role: 'student'
-      });
+      
+      // Check for duplicate attendance
+      const isDuplicate = await checkDuplicateAttendance(studentData.currentnfcId);
+      if (isDuplicate) {
+        setError('Student has already attended this event');
+        return;
+      }
+
+      // Record attendance
+      await recordAttendance(studentData);
       
       setShowPasswordPrompt(false);
       setPassword('');
       setStudentId('');
-      setStatus('Student verified successfully');
+      setStatus('Attendance recorded successfully');
       setShowModal(false);
+
+      // Show success message
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Attendance recorded successfully'
+      });
     } catch (error) {
       setError('Error verifying password: ' + error.message);
     }
   };
+
+  const checkDuplicateAttendance = async (nfcId) => {
+    try {
+      const attendanceRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+      const snapshot = await get(attendanceRef);
+      
+      if (snapshot.exists()) {
+        const attendanceData = snapshot.val();
+        return Object.values(attendanceData).some(record => 
+          record.nfcId === nfcId && record !== 'eventId' && record !== 'eventName' && record !== 'startTime'
+        );
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking duplicate attendance:', error);
+      return false;
+    }
+  };
+
+  const recordAttendance = async (studentData) => {
+    try {
+      // Save attendance to realtime database
+      const scanDataRef = ref(realtimeDb, `scanned-cards/${selectedEvent.eventName}`);
+      const attendanceRecord = {
+        nfcId: studentData.currentnfcId,
+        dateTimeIn: new Date().toISOString(),
+        eventId: selectedEvent.id,
+        eventName: selectedEvent.eventName,
+        studentId: studentData.studentId,
+        studentName: studentData.name,
+        course: studentData.course,
+        section: studentData.section,
+        campus: studentData.campus
+      };
+
+      await push(scanDataRef, attendanceRecord);
+
+      // Save to student's records
+      await saveEventToStudent(studentData);
+    } catch (error) {
+      throw new Error('Failed to record attendance: ' + error.message);
+    }
+  };
+
+  const saveEventToStudent = async (studentData) => {
+    try {
+      const studentEventData = {
+        eventId: selectedEvent.id,
+        eventName: selectedEvent.eventName,
+        description: selectedEvent.description,
+        location: selectedEvent.locations,
+        imageUrl: selectedEvent.imageUrl,
+        startTime: selectedEvent.startTime,
+        endTime: selectedEvent.endTime,
+        createdBy: selectedEvent.createdBy,
+        status: 'attended',
+        attendanceRecorded: new Date().toISOString(),
+        studentId: studentData.studentId,
+        studentName: studentData.name,
+        course: studentData.course,
+        section: studentData.section,
+        campus: studentData.campus
+      };
+
+      await addDoc(collection(db, 'StudentEvents'), studentEventData);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+
 
   const handleEventClick = async (event) => {
     setSelectedEvent(event);
@@ -135,7 +233,12 @@ const NFCReaderAttendance = () => {
       setError('Please select an event first');
       return;
     }
-  
+
+    if (selectedEvent.status === 'Pending') {
+      setError('Cannot record attendance for pending events');
+      return;
+    }
+
     try {
       setIsReading(true);
       setStatus('Waiting for NFC card...');
@@ -143,37 +246,38 @@ const NFCReaderAttendance = () => {
       
       const ndef = new NDEFReader();
       await ndef.scan();
-  
+
       ndef.addEventListener("reading", async ({ message }) => {
         try {
           const nfcId = new TextDecoder().decode(message.records[0].data);
-          const userRole = await checkUserRoleByNFC(nfcId);
           
-          if (userRole) {
-            setStatus('Retrieving user data...');
-            const collectionName = `Registered${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`;
-            const userQuery = query(
-              collection(db, collectionName),
-              where("currentnfcId", "==", nfcId),
-              where("position", "==", "Student")
-            );
-            const userSnap = await getDocs(userQuery);
-            
-            if (!userSnap.empty) {
-              setVerifiedUser({
-                ...userSnap.docs[0].data(),
-                role: userRole
-              });
-            } else {
-              console.log('Only accept student');
-              throw new Error('Unauthorized NFC card');
-            }
-          } else {
-            throw new Error('Unauthorized NFC card');
+          // Check for duplicate attendance
+          const isDuplicate = await checkDuplicateAttendance(nfcId);
+          if (isDuplicate) {
+            throw new Error('Student has already attended this event');
           }
+
+          // Get student data
+          const studentData = await getStudentData(nfcId);
+          if (!studentData) {
+            throw new Error('Unregistered NFC card');
+          }
+
+          // Record attendance
+          await recordAttendance(studentData);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: `Successfully recorded attendance for ${studentData.name}`
+          });
         } catch (error) {
           setError(error.message);
-          setVerifiedUser(null);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message
+          });
         } finally {
           setIsReading(false);
           ndef.stop();
@@ -182,6 +286,25 @@ const NFCReaderAttendance = () => {
     } catch (error) {
       setError(error.message);
       setIsReading(false);
+    }
+  };
+
+  const getStudentData = async (nfcId) => {
+    try {
+      const registeredStudentsRef = collection(db, 'RegisteredStudent');
+      const q = query(registeredStudentsRef, where('currentnfcId', '==', nfcId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        return {
+          id: querySnapshot.docs[0].id,
+          ...querySnapshot.docs[0].data()
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+      return null;
     }
   };
   

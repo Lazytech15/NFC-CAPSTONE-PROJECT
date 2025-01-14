@@ -29,6 +29,11 @@
     color: #666;
     transition: all 0.3s ease;
   }
+
+  .navButton span{
+    font-family: var(--f3);
+    font-weight: 700;
+  }
   
   .navButton:hover {
     color: #333;
@@ -59,8 +64,10 @@
   }
   
   .formGroup label {
-    font-weight: 500;
+    font-weight: 800;
+    font-size: var(--f-s);
     color: #4b5563;
+    font-family: var(--f3);
   }
   
   .input {

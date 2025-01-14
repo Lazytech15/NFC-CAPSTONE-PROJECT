@@ -434,42 +434,62 @@ const Login = () => {
     }, [isLoggedIn]);
 
     const checkUserRoleByNFC = async (nfcId) => {
-    // Check if user is already logged in
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-        setIsLoggedIn(true);
-        setNfcEnabled(false); // Disable NFC if user is logged in
-        return;
-    }
+        // Check if user is already logged in
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            setIsLoggedIn(true);
+            setNfcEnabled(false); // Disable NFC if user is logged in
+            return;
+        }
         try {
             const collections = ['RegisteredAdmin', 'RegisteredTeacher', 'RegisteredStudent'];
             const roles = ['admin', 'teacher', 'student'];
-
+    
             for (let i = 0; i < collections.length; i++) {
                 const q = query(collection(db, collections[i]), where("currentnfcId", "==", nfcId));
                 const snapshot = await getDocs(q);
-
+    
                 if (!snapshot.empty) {
                     const userData = snapshot.docs[0].data();
                     if (userData.uid) {
                         const userDoc = await getDoc(doc(db, 'users', userData.uid));
                         if (userDoc.exists()) {
-                            await updateStatus('authenticate --method nfc', ['Authenticating with stored credentials...']);
-                            try {
-                                const methods = await fetchSignInMethodsForEmail(auth, userData.email);
-                                if (methods.includes('google.com')) {
-                                    throw new Error('This account is linked to Google. Please use Google Sign-In.');
+                            // Check if LoginNFC exists or is not empty
+                            const loginNFC = userDoc.data().LoginNFC;
+                            if (loginNFC) {
+                                const { value: password } = await Swal.fire({
+                                    title: 'Enter your password',
+                                    input: 'password',
+                                    inputLabel: 'Password',
+                                    inputPlaceholder: 'Enter your password',
+                                    inputAttributes: {
+                                        maxlength: 20,
+                                        autocapitalize: 'off',
+                                        autocorrect: 'off'
+                                    }
+                                });
+    
+                                if (password) {
+                                    try {
+                                        await updateStatus('authenticate --method nfc', ['Authenticating with stored credentials...']);
+                                        const methods = await fetchSignInMethodsForEmail(auth, userData.email);
+                                        if (methods.includes('google.com')) {
+                                            throw new Error('This account is linked to Google. Please use Google Sign-In.');
+                                        }
+    
+                                        const storedPassword = userData.customPassword;
+                                        if (!storedPassword) {
+                                            throw new Error('No valid password found for NFC authentication');
+                                        }
+    
+                                        await signInWithEmailAndPassword(auth, userData.email, password);
+                                        return roles[i];
+                                    } catch (authError) {
+                                        throw authError;
+                                    }
+                                } else {
+                                    throw new Error('Password is required for NFC authentication');
                                 }
-
-                                const password = userData.customPassword;
-                                if (!password) {
-                                    throw new Error('No valid password found for NFC authentication');
-                                }
-
-                                await signInWithEmailAndPassword(auth, userData.email, password);
-                                return roles[i];
-                            } catch (authError) {
-                                throw authError;
                             }
                         }
                     }
@@ -481,6 +501,7 @@ const Login = () => {
             throw error;
         }
     };
+    
 
     const updateNFCCredentialsForGoogleAuth = async (userEmail, collections) => {
         try {

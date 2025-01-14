@@ -1,203 +1,251 @@
-.modalOverlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-  
-  .modalContent {
-    background-color: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-    max-width: 64rem;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  
-  .cardContent {
-    padding: 2rem;
-    background-color: white;
-  }
-  
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-  }
-  
-  .profileImage {
-    width: 6rem;
-    height: 6rem;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 0.25rem solid #3b82f6;
-  }
-  
-  .gridContainer {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-  }
-  
-  .sectionTitle {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #4b5563;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.5rem;
-  }
-  
-  .infoItem {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .icon {
-    color: #3b82f6;
-  }
-  
-  .qrCodeContainer {
-    margin-top: 2rem;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .qrCode {
-    width: 10rem;
-    height: 10rem;
-  }
-  
-  .qrCodeText {
-    font-size: 0.875rem;
-    color: #6b7280;
-    margin-top: 0.5rem;
-    text-align: center;
-  }
-  
-  .modalActions {
-    border-top: 1px solid #e5e7eb;
-    padding: 1rem;
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-  }
-  
-  .closeButton {
-    padding: 0.5rem 1rem;
-    background-color: #e5e7eb;
-    color: #1f2937;
-    border-radius: 0.25rem;
-    transition: background-color 0.2s;
-  }
-  
-  .closeButton:hover {
-    background-color: #d1d5db;
-  }
+/* Modal Styles */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  z-index: 50;
 }
 
 .modalContent {
   background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  width: 95%;
   max-width: 64rem;
-  width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  position: relative;
 }
 
+.closeModalButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.closeModalButton:hover {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+
+/* Card Content */
 .cardContent {
-  padding: 2rem;
-  background-color: white;
+  padding: 2rem 1.5rem;
 }
 
-header {
+/* Header Styles */
+.header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.headerText {
+  order: 2;
+}
+
+.headerTitle {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.headerSubtitle {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.profileImageContainer {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .profileImage {
-  width: 6rem;
-  height: 6rem;
-  border-radius: 50%;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 0.5rem;
   object-fit: cover;
   border: 0.25rem solid #3b82f6;
+  background-color: #f3f4f6;
 }
 
+.profileName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Grid Container */
 .gridContainer {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+  margin-bottom: 2.5rem;
+}
+
+/* Section Styles */
+.infoSection {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
 .sectionTitle {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #4b5563;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 0.5rem;
+  color: #1f2937;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
 }
 
+.infoGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+/* Info Items */
 .infoItem {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.infoItem:hover {
+  background-color: #f3f4f6;
 }
 
 .icon {
   color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.infoContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.infoLabel {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.infoValue {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+/* Education Section */
+.educationSection {
+  margin-top: 2.5rem;
+}
+
+.educationGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* QR Code Section */
+.qrCodeSection {
+  margin-top: 2.5rem;
+  padding-top: 2.5rem;
+  border-top: 2px solid #e5e7eb;
 }
 
 .qrCodeContainer {
-  margin-top: 2rem;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .qrCode {
-  width: 10rem;
-  height: 10rem;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .qrCodeText {
   font-size: 0.875rem;
   color: #6b7280;
-  margin-top: 0.5rem;
   text-align: center;
 }
 
-.modalActions {
-  border-top: 1px solid #e5e7eb;
-  padding: 1rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
+/* Responsive Breakpoints */
+@media (min-width: 640px) {
+  .cardContent {
+    padding: 2.5rem;
+  }
+
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+    gap: 3rem;
+  }
+
+  .headerText {
+    order: 1;
+  }
+
+  .profileImageContainer {
+    order: 2;
+  }
+
+  .educationGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .qrCode {
+    width: 10rem;
+    height: 10rem;
+  }
 }
 
-.closeButton {
-  padding: 0.5rem 1rem;
-  background-color: #e5e7eb;
-  color: #1f2937;
-  border-radius: 0.25rem;
-  transition: background-color 0.2s;
+@media (min-width: 768px) {
+  .gridContainer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.closeButton:hover {
-  background-color: #d1d5db;
+@media (min-width: 1024px) {
+  .cardContent {
+    padding: 3rem;
+  }
+
+  .profileImage {
+    width: 10rem;
+    height: 10rem;
+  }
+
+  .infoGrid {
+    gap: 1.5rem;
+  }
 }
-  

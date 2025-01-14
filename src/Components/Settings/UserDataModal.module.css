@@ -60,6 +60,8 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
+    font-family: var(--f3);
+    font-weight: 700;
   }
   
   .navButton.active {
